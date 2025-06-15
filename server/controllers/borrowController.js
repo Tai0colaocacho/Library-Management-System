@@ -39,6 +39,13 @@ export const reserveBook = catchAsyncErrors(async (req, res, next) => {
         return next(new ErrorHandler("Your account is inactive. Please contact support.", 403));
     }
 
+    if (!member.nationalId || !member.phoneNumber) {
+        return next(new ErrorHandler(
+            "Vui lòng hoàn thiện hồ sơ của bạn (bao gồm Số CCCD và Số điện thoại) trước khi mượn sách.",
+            403 
+        ));
+    }
+
     const existingBorrowsAndReservations = await Borrowing.countDocuments({
         "user.id": memberId,
         status: { $in: ['Reserved', 'Borrowed', 'Overdue'] }

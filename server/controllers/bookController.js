@@ -22,7 +22,6 @@ export const addBook = catchAsyncErrors(async (req, res, next) => {
         return next(new ErrorHandler(`Book with ISBN ${isbn} already exists.`, 400));
     }
 
-    
     const authorIds = [];
     if (authorNames && Array.isArray(authorNames)) {
         for (const name of authorNames) {
@@ -40,8 +39,6 @@ export const addBook = catchAsyncErrors(async (req, res, next) => {
         authorIds.push(author._id);
     }
 
-
-    
     let category;
     if (categoryName) {
         category = await Category.findOne({ name: categoryName.trim() });
@@ -50,12 +47,32 @@ export const addBook = catchAsyncErrors(async (req, res, next) => {
         }
     }
 
-    
     let publisher;
     if (publisherName) {
         publisher = await Publisher.findOne({ name: publisherName.trim() });
         if (!publisher) {
             publisher = await Publisher.create({ name: publisherName.trim() });
+        }
+    }
+
+    let coverImageData = {};
+    if (req.files && req.files.coverImage) {
+        const { coverImage } = req.files;
+        const allowedFormats = ['image/png', 'image/jpeg', 'image/webp'];
+        if (!allowedFormats.includes(coverImage.mimetype)) {
+            return next(new ErrorHandler("Cover image file format not supported.", 400));
+        }
+        try {
+            const cloudinaryResponse = await cloudinary.uploader.upload(
+                coverImage.tempFilePath, { folder: "LIBRARY_BOOK_COVERS" }
+            );
+            coverImageData = {
+                public_id: cloudinaryResponse.public_id,
+                url: cloudinaryResponse.secure_url,
+            };
+        } catch (uploadError) {
+            console.error("Cloudinary upload error:", uploadError);
+            return next(new ErrorHandler("Failed to upload cover image.", 500));
         }
     }
 
@@ -84,14 +101,6 @@ export const addBook = catchAsyncErrors(async (req, res, next) => {
         book,
     });
 });
-
-
-
-
-
-
-
-
 
 export const addBookCopy = catchAsyncErrors(async (req, res, next) => {
     const { bookId } = req.params;
@@ -129,7 +138,6 @@ export const updateBookCopyStatus = catchAsyncErrors(async (req, res, next) => {
     if (!status && !location) {
         return next(new ErrorHandler("Either status or location must be provided for update.", 400));
     }
-
     
     const allowedManualStatuses = ['Available', 'Maintenance', 'Lost', 'Damaged', 'Withdrawn'];
     if (status && !allowedManualStatuses.includes(status)) {
@@ -147,7 +155,6 @@ export const updateBookCopyStatus = catchAsyncErrors(async (req, res, next) => {
     if (!copy) {
         return next(new ErrorHandler("Book copy not found.", 404));
     }
-
     
     if (copy.status === 'Borrowed' || copy.status === 'Reserved') {
         return next(new ErrorHandler(
@@ -155,7 +162,6 @@ export const updateBookCopyStatus = catchAsyncErrors(async (req, res, next) => {
             400
         ));
     }
-
     
     if (status) {
         copy.status = status;
@@ -173,17 +179,13 @@ export const updateBookCopyStatus = catchAsyncErrors(async (req, res, next) => {
     });
 });
 
-
-
 export const getAllBooks = catchAsyncErrors(async (req, res, next) => {
     const { keyword, categoryId, authorId, publisherId, status, sortBy, page = 1, limit = 10 } = req.query;
     const query = {};
 
     if (keyword) {
         const keywordRegex = { $regex: keyword, $options: "i" };
-        
-        
-        
+
         query.$or = [
             { title: keywordRegex },
             { isbn: keywordRegex },
@@ -201,11 +203,7 @@ export const getAllBooks = catchAsyncErrors(async (req, res, next) => {
     if (status === 'Available') { 
         query['copies.status'] = 'Available';
     } else if (status === 'Unavailable') {
-        
-        
-        
-        
-        
+
     }
 
     const count = await Book.countDocuments(query);
@@ -311,6 +309,30 @@ export const updateBook = catchAsyncErrors(async (req, res, next) => {
         if (!publisher) publisher = await Publisher.create({ name: publisherName.trim() });
         book.publisher = publisher._id;
     }
+    
+    if (req.files && req.files.coverImage) {
+        if (book.coverImage && book.coverImage.public_id) {
+            await cloudinary.uploader.destroy(book.coverImage.public_id);
+        }
+        
+        const { coverImage } = req.files;
+        const allowedFormats = ['image/png', 'image/jpeg', 'image/webp'];
+        if (!allowedFormats.includes(coverImage.mimetype)) {
+            return next(new ErrorHandler("Cover image file format not supported.", 400));
+        }
+        try {
+            const cloudinaryResponse = await cloudinary.uploader.upload(
+                coverImage.tempFilePath, { folder: "LIBRARY_BOOK_COVERS" }
+            );
+            book.coverImage = {
+                public_id: cloudinaryResponse.public_id,
+                url: cloudinaryResponse.secure_url,
+            };
+        } catch (uploadError) {
+            console.error("Cloudinary upload error:", uploadError);
+            return next(new ErrorHandler("Failed to upload new cover image.", 500));
+        }
+    }
 
     await book.save();
 
@@ -328,20 +350,15 @@ export const deleteBook = catchAsyncErrors(async (req, res, next) => {
         return next(new ErrorHandler("Book not found.", 404));
     }
 
-    
-    
     const borrowingRecordExists = await Borrowing.findOne({ book: id });
 
     if (borrowingRecordExists) {
-        
-        
         return next(new ErrorHandler(
             "Cannot delete this book because it has borrowing history. Consider archiving it instead.",
             400
         ));
     }
 
-    
     await book.deleteOne();
 
     res.status(200).json({
@@ -350,7 +367,27 @@ export const deleteBook = catchAsyncErrors(async (req, res, next) => {
     });
 });
 
+export const deleteBookCover = catchAsyncErrors(async (req, res, next) => {
+    const { id } = req.params;
+    let book = await Book.findById(id);
+    if (!book) {
+        return next(new ErrorHandler("Book not found.", 404));
+    }
 
+    if (!book.coverImage || !book.coverImage.public_id) {
+        return next(new ErrorHandler("Book does not have a cover image to delete.", 400));
+    }
+
+    await cloudinary.uploader.destroy(book.coverImage.public_id);
+
+    book.coverImage = undefined;
+    await book.save();
+
+    res.status(200).json({
+        success: true,
+        message: "Book cover image deleted successfully."
+    });
+});
 
 export const addAuthor = catchAsyncErrors(async (req, res, next) => {
     const { name, biography } = req.body;
@@ -371,6 +408,7 @@ export const addCategory = catchAsyncErrors(async (req, res, next) => {
     const category = await Category.create({ name, description });
     res.status(201).json({ success: true, message: "Category added.", category });
 });
+
 export const getAllCategories = catchAsyncErrors(async (req, res, next) => {
     const categories = await Category.find();
     res.status(200).json({ success: true, categories });
@@ -382,6 +420,7 @@ export const addPublisher = catchAsyncErrors(async (req, res, next) => {
     const publisher = await Publisher.create({ name, address, contact_email });
     res.status(201).json({ success: true, message: "Publisher added.", publisher });
 });
+
 export const getAllPublishers = catchAsyncErrors(async (req, res, next) => {
     const publishers = await Publisher.find();
     res.status(200).json({ success: true, publishers });

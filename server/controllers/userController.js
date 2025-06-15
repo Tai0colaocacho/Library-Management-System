@@ -22,8 +22,6 @@ export const getUserDetailsForAdmin = catchAsyncErrors(async (req, res, next) =>
     if (!user) {
         return next(new ErrorHandler("User not found", 404));
     }
-    
-    
 
     res.status(200).json({
         success: true,
@@ -35,9 +33,7 @@ export const getUserDetailsForAdmin = catchAsyncErrors(async (req, res, next) =>
 
 
 export const createStaffOrMember = catchAsyncErrors(async (req, res, next) => {
-    const { name, email, password, role, is_active, 
-            
-          } = req.body;
+    const { name, email, password, role, is_active, nationalId, phoneNumber, address, dateOfBirth } = req.body;
 
     if (!name || !email || !password || !role) {
         return next(new ErrorHandler("Please provide name, email, password, and role.", 400));
@@ -81,9 +77,13 @@ export const createStaffOrMember = catchAsyncErrors(async (req, res, next) => {
         email,
         password: hashedPassword,
         role,
-        is_active: is_active !== undefined ? is_active : true, 
-        avatar: avatarData.url ? avatarData : undefined, 
-        accountVerified: true, 
+        is_active: is_active !== undefined ? is_active : true,
+        nationalId, 
+        phoneNumber,
+        address,
+        dateOfBirth,
+        avatar: avatarData.url ? avatarData : undefined,
+        accountVerified: true,
     });
 
     res.status(201).json({
@@ -96,7 +96,7 @@ export const createStaffOrMember = catchAsyncErrors(async (req, res, next) => {
 
 export const updateUserAccountByAdmin = catchAsyncErrors(async (req, res, next) => {
     const { userId } = req.params;
-    const { name, email, role, is_active, permissions } = req.body; 
+    const { name, email, role, is_active, permissions, nationalId, phoneNumber, address, dateOfBirth, gender } = req.body;
 
     const userToUpdate = await User.findById(userId);
     if (!userToUpdate) {
@@ -117,6 +117,11 @@ export const updateUserAccountByAdmin = catchAsyncErrors(async (req, res, next) 
         }
         userToUpdate.email = email;
     }
+    if (nationalId) userToUpdate.nationalId = nationalId;
+    if (phoneNumber) userToUpdate.phoneNumber = phoneNumber;
+    if (address) userToUpdate.address = address;
+    if (dateOfBirth) userToUpdate.dateOfBirth = dateOfBirth;
+    if (gender) userToUpdate.gender = gender;
     if (role && ['Admin', 'Librarian', 'Member'].includes(role)) {
         userToUpdate.role = role;
     }

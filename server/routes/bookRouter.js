@@ -1,6 +1,6 @@
 import express from "express";
 import {
-    addBook, getAllBooks, getBookDetails, deleteBook, updateBook, 
+    addBook, getAllBooks, getBookDetails, deleteBook, updateBook, deleteBookCover,
     addBookCopy, updateBookCopyStatus,
     addAuthor, getAllAuthors,
     addCategory, getAllCategories,
@@ -16,6 +16,7 @@ router.get('/all', isAuthenticated, getAllBooks);
 router.get('/:id', isAuthenticated, getBookDetails);
 router.put('/admin/update/:id', isAuthenticated, isAuthorized("Admin", "Librarian"), updateBook); 
 router.delete('/admin/delete/:id', isAuthenticated, isAuthorized("Admin"), deleteBook);
+router.delete('/admin/:id/cover', isAuthenticated, isAuthorized("Admin", "Librarian"), deleteBookCover);
 
 
 router.post('/admin/:bookId/copies/add', isAuthenticated, isAuthorized("Admin", "Librarian"), addBookCopy);

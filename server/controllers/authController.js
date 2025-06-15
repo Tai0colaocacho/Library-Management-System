@@ -47,7 +47,6 @@ export const register = catchAsyncErrors(async (req, res, next) => {
         email,
         password: hashedPassword,
         role: "Member",
-        is_active: false,
     });
 
     const verificationCode = user.generateVerificationCode();
@@ -257,7 +256,7 @@ export const updatePassword = catchAsyncErrors(async (req, res, next) => {
 });
 
 export const updateMyProfile = catchAsyncErrors(async (req, res, next) => {
-    const { name, email } = req.body; 
+    const { name, email, nationalId, phoneNumber, dateOfBirth, gender, address } = req.body;
     const userId = req.user._id;
 
     const user = await User.findById(userId);
@@ -266,6 +265,11 @@ export const updateMyProfile = catchAsyncErrors(async (req, res, next) => {
     }
 
     if (name) user.name = name;
+    if (nationalId) user.nationalId = nationalId;
+    if (phoneNumber) user.phoneNumber = phoneNumber;
+    if (dateOfBirth) user.dateOfBirth = dateOfBirth;
+    if (gender) user.gender = gender; 
+    if (address) user.address = address;
 
     if (email && email !== user.email) {
         const emailExists = await User.findOne({ email, _id: { $ne: userId } });

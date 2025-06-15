@@ -19,6 +19,27 @@ const userSchema = new mongoose.Schema({
         required: true,
         select: false,
     },
+    nationalId: {
+        type: String,
+        trim: true,
+        unique: true,
+        sparse: true
+    },
+    phoneNumber: {
+        type: String,
+        trim: true
+    },
+    dateOfBirth: {
+        type: Date
+    },
+    gender: {
+        type: String,
+        enum: ['Male', 'Female', 'Other'] 
+    },
+    address: {
+        type: String,
+        trim: true
+    },
     role: {
         type: String,
         enum: ["Admin", "Member", "Librarian"], 
@@ -28,6 +49,7 @@ const userSchema = new mongoose.Schema({
         type: Boolean,
         default: true, 
     },
+    accountVerified: { type: Boolean, default: false },
     borrowedBooks: [ 
         {
             borrowingId: {

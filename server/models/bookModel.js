@@ -47,6 +47,10 @@ const bookSchema = new mongoose.Schema({
     page_count: { 
         type: Number,
     },
+    coverImage: {
+        public_id: { type: String },
+        url: { type: String }
+    },
     copies: [copySchema] 
 },
 {
