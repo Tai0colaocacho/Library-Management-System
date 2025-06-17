@@ -1,6 +1,7 @@
 import { createSlice } from "@reduxjs/toolkit"
 import axios from "axios"
 import { toggleRecordBookPopup } from "./popUpSlice";
+import { toast } from 'react-toastify';
 const borrowSlice = createSlice({
     name: "borrowings",
     initialState: {
@@ -123,5 +124,45 @@ export const returnBook = (email, id) => async (dispatch) => {
 export const resetBorrowSlice = () => (dispatch) => {
     dispatch(borrowSlice.actions.resetBorrowSlice());
 }
+
+export const confirmPickup = (borrowingId) => async (dispatch) => {
+    try {
+        const res = await axios.put(`http://localhost:4000/api/v1/borrowings/admin/pickup/${borrowingId}/confirm`, {}, { withCredentials: true });
+        toast.success(res.data.message);
+        dispatch(fetchAllBorrowedBooks());
+    } catch (err) {
+        toast.error(err.response?.data?.message || "Failed to confirm pickup.");
+    }
+};
+
+export const returnBookAdmin = (borrowingId) => async (dispatch) => {
+    try {
+        const res = await axios.put(`http://localhost:4000/api/v1/borrowings/admin/return/${borrowingId}`, {}, { withCredentials: true });
+        toast.success(res.data.message);
+        dispatch(fetchAllBorrowedBooks());
+    } catch (err) {
+        toast.error(err.response?.data?.message || "Failed to return book.");
+    }
+};
+
+export const renewBook = (borrowingId) => async (dispatch) => {
+    try {
+        const res = await axios.put(`http://localhost:4000/api/v1/borrowings/admin/renew/${borrowingId}`, {}, { withCredentials: true });
+        toast.success(res.data.message);
+        dispatch(fetchAllBorrowedBooks());
+    } catch (err) {
+        toast.error(err.response?.data?.message || "Failed to renew book.");
+    }
+};
+
+export const reportLostOrDamaged = (borrowingId, finalStatus) => async (dispatch) => {
+    try {
+        const res = await axios.put(`http://localhost:4000/api/v1/borrowings/admin/report-lost-or-damaged/${borrowingId}`, { finalStatus }, { withCredentials: true });
+        toast.success(res.data.message);
+        dispatch(fetchAllBorrowedBooks());
+    } catch (err) {
+        toast.error(err.response?.data?.message || "Failed to report status.");
+    }
+};
 
 export default borrowSlice.reducer;

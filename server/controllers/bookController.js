@@ -5,15 +5,24 @@ import { Author } from "../models/authorModel.js";
 import { Category } from "../models/categoryModel.js"; 
 import { Publisher } from "../models/publisherModel.js";
 import mongoose from "mongoose";
+import cloudinary from "cloudinary";
 
 export const addBook = catchAsyncErrors(async (req, res, next) => {
     let {
         title, isbn, authorNames, categoryName, publisherName, 
-        description, publication_date, page_count,
+        description, publication_date, page_count, price,
         initialCopies 
     } = req.body;
 
-    if (!title || !isbn || !authorNames || !categoryName || !publisherName || !description || !initialCopies || initialCopies.length === 0) {
+    if (initialCopies && typeof initialCopies === 'string') {
+        try {
+            initialCopies = JSON.parse(initialCopies);
+        } catch (e) {
+            return next(new ErrorHandler("Invalid format for initial copies.", 400));
+        }
+    }
+
+    if (!title || !isbn || !authorNames || !categoryName || !publisherName || !description || !price || !initialCopies || initialCopies.length === 0) {
         return next(new ErrorHandler("Please fill all required fields and provide initial copy information.", 400));
     }
 
@@ -57,6 +66,7 @@ export const addBook = catchAsyncErrors(async (req, res, next) => {
 
     let coverImageData = {};
     if (req.files && req.files.coverImage) {
+        console.log("File received by backend:", req.files.coverImage);
         const { coverImage } = req.files;
         const allowedFormats = ['image/png', 'image/jpeg', 'image/webp'];
         if (!allowedFormats.includes(coverImage.mimetype)) {
@@ -90,9 +100,11 @@ export const addBook = catchAsyncErrors(async (req, res, next) => {
         category: category ? category._id : null,
         publisher: publisher ? publisher._id : null,
         description,
+        price,
         publication_date,
         page_count,
         copies: bookCopies, 
+        coverImage: coverImageData.url ? coverImageData : undefined
     });
 
     res.status(201).json({
@@ -264,7 +276,7 @@ export const updateBook = catchAsyncErrors(async (req, res, next) => {
     const { id } = req.params;
     const {
         title, isbn, authorNames, categoryName, publisherName,
-        description, publication_date, page_count
+        description, publication_date, page_count, price
     } = req.body;
 
     let book = await Book.findById(id);
@@ -272,7 +284,36 @@ export const updateBook = catchAsyncErrors(async (req, res, next) => {
         return next(new ErrorHandler("Book not found.", 404));
     }
 
-    
+    // --- LOGIC XỬ LÝ ẢNH BÌA MỚI ---
+    if (req.files && req.files.coverImage) {
+        const { coverImage } = req.files;
+        // 1. Xóa ảnh cũ nếu có
+        if (book.coverImage && book.coverImage.public_id) {
+            await cloudinary.uploader.destroy(book.coverImage.public_id);
+        }
+        
+        // 2. Upload ảnh mới
+        const allowedFormats = ['image/png', 'image/jpeg', 'image/webp'];
+        if (!allowedFormats.includes(coverImage.mimetype)) {
+            return next(new ErrorHandler("Cover image file format not supported.", 400));
+        }
+        try {
+            const cloudinaryResponse = await cloudinary.uploader.upload(
+                coverImage.tempFilePath, { folder: "LIBRARY_BOOK_COVERS" }
+            );
+            // 3. Cập nhật thông tin ảnh mới vào document sách
+            book.coverImage = {
+                public_id: cloudinaryResponse.public_id,
+                url: cloudinaryResponse.secure_url,
+            };
+        } catch (uploadError) {
+            console.error("Cloudinary upload error:", uploadError);
+            return next(new ErrorHandler("Failed to upload new cover image.", 500));
+        }
+    }
+    // --- KẾT THÚC LOGIC XỬ LÝ ẢNH ---
+
+    // Cập nhật các thông tin khác
     if (isbn && isbn !== book.isbn) {
         const isbnExists = await Book.findOne({ isbn: isbn, _id: { $ne: id } });
         if (isbnExists) {
@@ -281,13 +322,12 @@ export const updateBook = catchAsyncErrors(async (req, res, next) => {
         book.isbn = isbn;
     }
 
-    
     if (title) book.title = title;
     if (description) book.description = description;
     if (publication_date) book.publication_date = publication_date;
     if (page_count) book.page_count = page_count;
+    if (price) book.price = price;
 
-    
     if (authorNames && Array.isArray(authorNames)) {
         const authorIds = [];
         for (const name of authorNames) {
@@ -308,30 +348,6 @@ export const updateBook = catchAsyncErrors(async (req, res, next) => {
         let publisher = await Publisher.findOne({ name: publisherName.trim() });
         if (!publisher) publisher = await Publisher.create({ name: publisherName.trim() });
         book.publisher = publisher._id;
-    }
-    
-    if (req.files && req.files.coverImage) {
-        if (book.coverImage && book.coverImage.public_id) {
-            await cloudinary.uploader.destroy(book.coverImage.public_id);
-        }
-        
-        const { coverImage } = req.files;
-        const allowedFormats = ['image/png', 'image/jpeg', 'image/webp'];
-        if (!allowedFormats.includes(coverImage.mimetype)) {
-            return next(new ErrorHandler("Cover image file format not supported.", 400));
-        }
-        try {
-            const cloudinaryResponse = await cloudinary.uploader.upload(
-                coverImage.tempFilePath, { folder: "LIBRARY_BOOK_COVERS" }
-            );
-            book.coverImage = {
-                public_id: cloudinaryResponse.public_id,
-                url: cloudinaryResponse.secure_url,
-            };
-        } catch (uploadError) {
-            console.error("Cloudinary upload error:", uploadError);
-            return next(new ErrorHandler("Failed to upload new cover image.", 500));
-        }
     }
 
     await book.save();

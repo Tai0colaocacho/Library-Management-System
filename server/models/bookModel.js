@@ -41,6 +41,11 @@ const bookSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
+    price: {
+        type: Number,
+        required: [true, "Please enter the price of the book."],
+        min: [0, "Price cannot be negative."]
+    },
     publication_date: { 
         type: Date,
     },

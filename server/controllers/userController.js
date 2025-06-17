@@ -167,11 +167,3 @@ export const updateUserAccountByAdmin = catchAsyncErrors(async (req, res, next) 
     });
 });
 
-
-
-export const registerNewAdmin = catchAsyncErrors(async (req, res, next) => {
-    
-    
-    req.body.role = 'Admin'; 
-    return createStaffOrMember(req, res, next); 
-});

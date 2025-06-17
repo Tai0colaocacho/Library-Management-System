@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import { useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Home from './pages/Home';
 import Login from './pages/Login';
@@ -13,6 +13,8 @@ import { getUser } from "./store/slices/authSlice";
 import { fetchAllUsers } from "./store/slices/userSlice";
 import { fetchAllBooks } from "./store/slices/bookSlice";
 import { fetchAllBorrowedBooks, fetchUserBorrowedBooks } from "./store/slices/borrowSlice";
+import { fetchAllMetadata } from "./store/slices/metadataSlice";
+import { fetchNotifications } from "./store/slices/notificationSlice";
 
 const App = () => {
   const dispatch = useDispatch();
@@ -20,15 +22,19 @@ const App = () => {
 
   useEffect(() => {
     dispatch(getUser());
-    dispatch(fetchAllBooks());
-    if (isAuthenticated && user?.role === "User") {
-      dispatch(fetchUserBorrowedBooks());
-    }
-    if (isAuthenticated && user?.role === "Admin") {
-      dispatch(fetchAllUsers());
-      dispatch(fetchAllBorrowedBooks());
-    }
-  }, [isAuthenticated]);
+      if (isAuthenticated) {
+          dispatch(fetchAllBooks());
+          dispatch(fetchNotifications());
+          if (user?.role === "User") {
+              dispatch(fetchUserBorrowedBooks());
+          }
+          if (user?.role === "Admin") {
+              dispatch(fetchAllUsers());
+              dispatch(fetchAllBorrowedBooks());
+              dispatch(fetchAllMetadata());
+          }
+      }
+  }, [isAuthenticated, user?.role, dispatch]);
 
   return (
     <Router>

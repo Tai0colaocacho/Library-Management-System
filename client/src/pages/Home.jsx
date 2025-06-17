@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { GiHamburgerMenu } from "react-icons/gi";
 import { useSelector } from "react-redux";
 import { Navigate } from "react-router-dom";
@@ -9,6 +9,7 @@ import BookManagement from "../components/BookManagement";
 import Catalog from "../components/Catalog";
 import Users from "../components/Users";
 import MyBorrowedBooks from "../components/MyBorrowedBooks"
+import Settings from "../components/Settings";
 const Home = () => {
   const [isSideBarOpen, setIsSideBarOpen] = useState(false);
   const [selectedComponent, setSelectedComponent] = useState("");
@@ -52,6 +53,11 @@ const Home = () => {
               if (user.role === "Admin") {
                 return <Users />;
               }
+                  break;
+            case "Settings":
+              if (user.role === "Admin") {
+                return <Settings />;
+              }
               break;
             case "My Borrowed Books":
               return <MyBorrowedBooks />;
@@ -61,7 +67,6 @@ const Home = () => {
               ) : (
                 <AdminDashboard />
               );
-              break;
           }
         })()}
       </div>

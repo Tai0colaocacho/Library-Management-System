@@ -6,7 +6,8 @@ import {
     renewBook,
     getMyBorrowingHistory,
     cancelReservation,
-    getAllBorrowings
+    getAllBorrowings,
+    reportBookLostOrDamaged
 } from "../controllers/borrowController.js";
 import { isAuthenticated, isAuthorized } from '../middlewares/authMiddleware.js';
 

@@ -1,7 +1,6 @@
 import { createSlice } from "@reduxjs/toolkit";
 import axios from "axios";
 import { toast } from "react-toastify";
-import { toggleAddNewAdminPopup } from "./popUpSlice";
 
 const userSlice = createSlice({
     name: "users",
@@ -34,27 +33,42 @@ const userSlice = createSlice({
 
 export const fetchAllUsers = () => async (dispatch) => {
     dispatch(userSlice.actions.fetchAllUserRequest());
-    await axios.get("http://localhost:4000/api/v1/users/all", { withCredentials: true }).then((res) => {
+    await axios.get("http://localhost:4000/api/v1/users/admin/all", { withCredentials: true }).then((res) => {
         dispatch(userSlice.actions.fetchAllUserSuccess(res.data.users))
     }).catch((err) => {
         dispatch(userSlice.actions.fetchAllUserFailed(err.response.data.message))
     })
 }
 
-export const addNewAdmin = (data) => async (dispatch) => {
+export const updateUser = (userId, userData) => async (dispatch) => {
+
     dispatch(userSlice.actions.addNewAdminRequest());
-    await axios.post("http://localhost:4000/api/v1/users/add/new-admin", data, {
-        withCredentials: true, headers: {
-            "Content-Type": "multipart/form-data",
-        }
-    }).then((res) => {
-        dispatch(userSlice.actions.addNewAdminSuccess());
+    try {
+        const res = await axios.put(`http://localhost:4000/api/v1/users/admin/update/${userId}`, userData, {
+            withCredentials: true,
+            headers: { 'Content-Type': 'application/json' }
+        });
         toast.success(res.data.message);
-        dispatch(toggleAddNewAdminPopup());
-    }).catch((err) => {
+        dispatch(userSlice.actions.addNewAdminSuccess());
+    } catch (err) {
+        toast.error(err.response?.data?.message || "Failed to update user.");
         dispatch(userSlice.actions.addNewAdminFailed());
-        toast.error(err.response.data.message);
-    })
-}
+    }
+};
+
+export const addStaff = (staffData) => async (dispatch) => {
+    dispatch(userSlice.actions.addNewAdminRequest());
+    try {
+        const res = await axios.post("http://localhost:4000/api/v1/users/admin/add-staff", staffData, {
+            withCredentials: true,
+            headers: { 'Content-Type': 'application/json' }
+        });
+        toast.success(res.data.message);
+        dispatch(userSlice.actions.addNewAdminSuccess());
+    } catch (err) {
+        toast.error(err.response?.data?.message || "Failed to add staff member.");
+        dispatch(userSlice.actions.addNewAdminFailed());
+    }
+};
 
 export default userSlice.reducer; 

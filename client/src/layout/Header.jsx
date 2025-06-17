@@ -1,14 +1,21 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import settingIcon from "../assets/setting.png";
 import userIcon from "../assets/user.png";
 import { useDispatch, useSelector } from "react-redux";
 import {toggleSettingPopup} from "../store/slices/popUpSlice";
+import { Bell } from 'lucide-react';
+import NotificationPanel from "../popups/NotificationPanel";
+
 
 const Header = () => {
   const dispatch = useDispatch();
   const {user} = useSelector((state) => state.auth);
   const [currentTime, setCurrentTime] = useState("");
   const [currentDate, setCurrentDate] = useState("");
+    
+  const { unreadCount } = useSelector(state => state.notifications);
+  const [isNotifPanelOpen, setIsNotifPanelOpen] = useState(false);
+  const notifRef = useRef(null);
 
   useEffect(() => {
     const updateDateTime = () => {
@@ -24,6 +31,19 @@ const Header = () => {
     const intervalId = setInterval(updateDateTime, 1000);
     return () => clearInterval(intervalId); 
   }, [])
+    
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+        if (notifRef.current && !notifRef.current.contains(event.target)) {
+            setIsNotifPanelOpen(false);
+        }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+        document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [notifRef]); 
+    
   return (<>
     <header className = "absolute top-0 bg-white w-full py-4 px-6 left-0 shadow-md flex justify-between items-center">
       <div className = "flex items-center gap-2">
@@ -34,7 +54,18 @@ const Header = () => {
         </div>
       </div>
 
-      <div className = "hidden md:flex items-center gap-2">
+      <div className="hidden md:flex items-center gap-2">
+        <div ref={notifRef} className="relative">
+            <button onClick={() => setIsNotifPanelOpen(!isNotifPanelOpen)} className="relative p-2 rounded-full hover:bg-gray-100">
+                <Bell className="h-6 w-6"/>
+                {unreadCount > 0 && (
+                    <span className="absolute top-0 right-0 h-4 w-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+                        {unreadCount}
+                    </span>
+                )}
+            </button>
+            {isNotifPanelOpen && <NotificationPanel closePanel={() => setIsNotifPanelOpen(false)}/>}
+        </div>    
         <div className = "flex flex-col text-sm lg:text-base items-end font-semibold">
           <span>{currentTime}</span>
           <span>{currentDate}</span>
