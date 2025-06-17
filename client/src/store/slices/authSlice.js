@@ -1,4 +1,4 @@
-import {createSlice} from '@reduxjs/toolkit'
+import { createSlice } from '@reduxjs/toolkit'
 import axios from 'axios'
 import { act } from 'react';
 
@@ -12,123 +12,123 @@ const authSlice = createSlice({
         isAuthenticated: false,
     },
     reducers: {
-        registerRequest(state){
+        registerRequest(state) {
             state.loading = true;
             state.error = null;
             state.message = null;
         },
-        registerSuccess(state, action){
+        registerSuccess(state, action) {
             state.loading = false;
             state.message = action.payload.message;
         },
-        registerFailed(state, action){
+        registerFailed(state, action) {
             state.loading = false;
             state.error = action.payload;
         },
-        otpVerificationRequest(state){
+        otpVerificationRequest(state) {
             state.loading = true;
             state.error = null;
             state.message = null;
         },
-        otpVerificationSuccess(state, action){
-            state.loading = false;
-            state.message = action.payload.message;
-            state.isAuthenticated = true;
-            state.user = action.payload.user;
-        },
-        otpVerificationFailed(state, action){
-            state.loading = false;
-            state.error = action.payload;
-        },
-        loginRequest(state){
-            state.loading = true;
-            state.error = null;
-            state.message = null;
-        },
-        loginSuccess(state, action){
+        otpVerificationSuccess(state, action) {
             state.loading = false;
             state.message = action.payload.message;
             state.isAuthenticated = true;
             state.user = action.payload.user;
         },
-        loginFailed(state, action){
+        otpVerificationFailed(state, action) {
             state.loading = false;
             state.error = action.payload;
         },
-        logoutRequest(state){
+        loginRequest(state) {
+            state.loading = true;
+            state.error = null;
+            state.message = null;
+        },
+        loginSuccess(state, action) {
+            state.loading = false;
+            state.message = action.payload.message;
+            state.isAuthenticated = true;
+            state.user = action.payload.user;
+        },
+        loginFailed(state, action) {
+            state.loading = false;
+            state.error = action.payload;
+        },
+        logoutRequest(state) {
             state.loading = true;
             state.message = null;
             state.error = null;
         },
-        logoutSuccess(state, action){
+        logoutSuccess(state, action) {
             state.loading = false;
             state.message = action.payload;
             state.isAuthenticated = false;
             state.user = null;
         },
-        logoutFailed(state, action){
+        logoutFailed(state, action) {
             state.loading = false;
             state.error = action.payload;
             state.message = null;
         },
-        getUserRequest(state){
+        getUserRequest(state) {
             state.loading = true;
             state.error = null;
             state.message = null;
         },
-        getUserSuccess(state, action){
+        getUserSuccess(state, action) {
             state.loading = false;
             state.user = action.payload.user;
             state.isAuthenticated = true;
         },
-        getUserFailed(state, action){
+        getUserFailed(state, action) {
             state.loading = false;
             state.user = null;
             state.isAuthenticated = false;
             state.error = action.payload;
         },
-        forgotPasswordRequest(state){
+        forgotPasswordRequest(state) {
             state.loading = true;
             state.error = null;
             state.message = null;
         },
-        forgotPasswordSuccess(state, action){
+        forgotPasswordSuccess(state, action) {
             state.loading = false;
             state.message = action.payload;
         },
-        forgotPasswordFailed(state, action){
+        forgotPasswordFailed(state, action) {
             state.loading = false;
             state.error = action.payload;
         },
-        resetPasswordRequest(state){
+        resetPasswordRequest(state) {
             state.loading = true;
             state.error = null;
             state.message = null;
         },
-        resetPasswordSuccess(state, action){
+        resetPasswordSuccess(state, action) {
             state.loading = false;
             state.message = action.payload.message;
             state.user = action.payload.user;
             state.isAuthenticated = true;
         },
-        resetPasswordFailed(state, action){
+        resetPasswordFailed(state, action) {
             state.loading = false;
             state.error = action.payload;
         },
-        updatePasswordRequest(state){
+        updatePasswordRequest(state) {
             state.loading = true;
             state.error = null;
             state.message = null;
         },
-        updatePasswordSuccess(state, action){
+        updatePasswordSuccess(state, action) {
             state.loading = false;
             state.message = action.payload;
         },
-        updatePasswordFailed(state, action){
+        updatePasswordFailed(state, action) {
             state.loading = false;
             state.error = action.payload;
         },
-        resetAuthSlice(state){
+        resetAuthSlice(state) {
             state.error = null;
             state.loading = false;
             state.message = null;
@@ -140,10 +140,11 @@ const authSlice = createSlice({
 })
 
 export const resetAuthSlice = () => (dispatch) => {
-    dispatch(authSlice  .actions.resetAuthSlice())
+    dispatch(authSlice.actions.resetAuthSlice())
 }
 
 export const register = (data) => async (dispatch) => {
+    console.log("Data gui len be:", data);
     dispatch(authSlice.actions.registerRequest());
     await axios.post("http://localhost:4000/api/v1/auth/register", data, {
         withCredentials: true,
@@ -160,7 +161,7 @@ export const register = (data) => async (dispatch) => {
 
 export const otpVerification = (email, otp) => async (dispatch) => {
     dispatch(authSlice.actions.otpVerificationRequest());
-    await axios.post("http://localhost:4000/api/v1/auth/verify-otp", {email, otp}, {
+    await axios.post("http://localhost:4000/api/v1/auth/verify-otp", { email, otp }, {
         withCredentials: true,
         headers: {
             "Content-Type": "application/json",
@@ -176,6 +177,7 @@ export const otpVerification = (email, otp) => async (dispatch) => {
 export const login = (data) => async (dispatch) => {
     dispatch(authSlice.actions.loginRequest());
     await axios.post("http://localhost:4000/api/v1/auth/login", data, {
+
         withCredentials: true,
         headers: {
             "Content-Type": "application/json",
@@ -190,7 +192,7 @@ export const login = (data) => async (dispatch) => {
 
 export const logout = () => async (dispatch) => {
     dispatch(authSlice.actions.logoutRequest());
-    await axios.get("http://localhost:4000/api/v1/auth/logout",{
+    await axios.get("http://localhost:4000/api/v1/auth/logout", {
         withCredentials: true,
         headers: {
             "Content-Type": "application/json",
@@ -206,7 +208,7 @@ export const logout = () => async (dispatch) => {
 
 export const getUser = () => async (dispatch) => {
     dispatch(authSlice.actions.getUserRequest());
-    await axios.get("http://localhost:4000/api/v1/auth/me",{
+    await axios.get("http://localhost:4000/api/v1/auth/me", {
         withCredentials: true,
         headers: {
             "Content-Type": "application/json",
@@ -221,7 +223,7 @@ export const getUser = () => async (dispatch) => {
 
 export const forgotPassword = (email) => async (dispatch) => {
     dispatch(authSlice.actions.forgotPasswordRequest());
-    await axios.post("http://localhost:4000/api/v1/auth/password/forgot", {email}, {
+    await axios.post("http://localhost:4000/api/v1/auth/password/forgot", { email }, {
         withCredentials: true,
         headers: {
             "Content-Type": "application/json",

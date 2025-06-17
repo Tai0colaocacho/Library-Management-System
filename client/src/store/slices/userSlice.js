@@ -1,32 +1,32 @@
-import {createSlice} from "@reduxjs/toolkit";
+import { createSlice } from "@reduxjs/toolkit";
 import axios from "axios";
-import {toast} from "react-toastify";
+import { toast } from "react-toastify";
 import { toggleAddNewAdminPopup } from "./popUpSlice";
 
 const userSlice = createSlice({
-    name: "user",
+    name: "users",
     initialState: {
         users: [],
         loading: false,
     },
     reducers: {
-        fetchAllUserRequest(state){
+        fetchAllUserRequest(state) {
             state.loading = true;
         },
-        fetchAllUserSuccess(state, action){
+        fetchAllUserSuccess(state, action) {
             state.loading = false;
             state.users = action.payload;
         },
-        fetchAllUserFailed(state){
+        fetchAllUserFailed(state) {
             state.loading = false;
         },
-        addNewAdminRequest(state){
+        addNewAdminRequest(state) {
             state.loading = true;
         },
-        addNewAdminSuccess(state){
+        addNewAdminSuccess(state) {
             state.loading = false;
         },
-        addNewAdminFailed(state){
+        addNewAdminFailed(state) {
             state.loading = false;
         },
     },
@@ -34,18 +34,20 @@ const userSlice = createSlice({
 
 export const fetchAllUsers = () => async (dispatch) => {
     dispatch(userSlice.actions.fetchAllUserRequest());
-    await axios.get("http://localhost:4000/api/v1/user/all", {withCredentials: true}).then((res) => {
+    await axios.get("http://localhost:4000/api/v1/users/all", { withCredentials: true }).then((res) => {
         dispatch(userSlice.actions.fetchAllUserSuccess(res.data.users))
     }).catch((err) => {
         dispatch(userSlice.actions.fetchAllUserFailed(err.response.data.message))
-   })
+    })
 }
 
 export const addNewAdmin = (data) => async (dispatch) => {
     dispatch(userSlice.actions.addNewAdminRequest());
-    await axios.post("http://localhost:4000/api/v1/user/add/new-admin", data, {withCredentials: true, headers: {
-        "Content-Type": "multipart/form-data",
-    }}).then((res) => {
+    await axios.post("http://localhost:4000/api/v1/users/add/new-admin", data, {
+        withCredentials: true, headers: {
+            "Content-Type": "multipart/form-data",
+        }
+    }).then((res) => {
         dispatch(userSlice.actions.addNewAdminSuccess());
         toast.success(res.data.message);
         dispatch(toggleAddNewAdminPopup());
