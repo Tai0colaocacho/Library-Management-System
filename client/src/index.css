@@ -3,10 +3,14 @@
 @tailwind components;
 @tailwind utilities;
 
+body {
+    overflow-x: hidden;
+  }
+
 * {
   font-family: "Montserrat", serif;
   font-optical-sizing: auto;
   font-style: normal;
-  overflow-x: hidden;
+  /* overflow-x: hidden; */
   box-sizing: border-box;
 }
