@@ -19,8 +19,8 @@ const Settings = () => {
     }, [settings]);
 
     const handleInputChange = (e) => {
-        const { name, value, type } = e.target;
-        const processedValue = type === 'number' ? (value === '' ? '' : parseFloat(value)) : value;
+        const { name, value, type, checked } = e.target;
+        const processedValue = type === 'checkbox' ? checked : (type === 'number' ? (value === '' ? '' : parseFloat(value)) : value);
         setFormData(prev => ({ ...prev, [name]: processedValue }));
     };
 
@@ -155,6 +155,49 @@ const Settings = () => {
                     </div>
                 </div>
 
+                <div className="mt-8 pt-6 border-t">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Password Policy</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                        {/* --- Password Min Length --- */}
+                        <div>
+                            <label htmlFor="password_min_length" className="block text-sm font-medium text-gray-700">
+                                Minimum Password Length
+                            </label>
+                            <input
+                                type="number"
+                                name="password_min_length"
+                                id="password_min_length"
+                                value={formData.password_min_length || ''}
+                                onChange={handleInputChange}
+                                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"
+                            />
+                            <p className="mt-1 text-xs text-gray-500">Minimum number of characters required for a user&apos;s password.</p>
+                        </div>
+
+                        {/* --- Password Requires Special Char --- */}
+                        <div className="pt-7">
+                            <div className="relative flex items-start">
+                                <div className="flex items-center h-5">
+                                    <input
+                                        id="password_requires_special_char"
+                                        name="password_requires_special_char"
+                                        type="checkbox"
+                                        checked={!!formData.password_requires_special_char}
+                                        onChange={handleInputChange}
+                                        className="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300 rounded"
+                                    />
+                                </div>
+                                <div className="ml-3 text-sm">
+                                    <label htmlFor="password_requires_special_char" className="font-medium text-gray-700">
+                                        Require Special Characters
+                                    </label>
+                                    <p className="text-gray-500 text-xs">Force passwords to include special characters (e.g., !, @, #, $).</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
                 <div className="mt-8 pt-5 border-t border-gray-200 text-right">
                     <button
                         type="submit"

@@ -151,7 +151,7 @@ const BookManagement = () => {
                     : "Unavailable"}
                 </p>
 
-                {isAuthenticated && user?.role === "Admin" && (
+                {isAuthenticated && (user?.role === "Admin" || user?.role === "Librarian") && (
                   <div className="mt-auto flex justify-around gap-2 pt-2 border-t">
                     <button className="text-blue-600 hover:scale-110 transition" title="View Details" onClick={() => openDetailPopup(book)}>
                         <BookA size={20} />
@@ -162,13 +162,15 @@ const BookManagement = () => {
                     <button className="text-green-600 hover:scale-110 transition" title="Manage Copies" onClick={() => openManageCopiesPopup(book)}>
                         <NotebookPen size={20}/>
                     </button>
+                    {user.role === "Admin" && (
                     <button 
-                      className="text-red-600 hover:scale-110 transition" 
-                      title="Delete Book"
-                      onClick={() => handleDeleteBook(book._id, book.title)}
+                        className="text-red-600 hover:scale-110 transition" 
+                        title="Delete Book"
+                        onClick={() => handleDeleteBook(book._id, book.title)}
                     >
                         <Trash2 size={20}/>
                     </button>
+                )}
                   </div>
                 )}
               </div>

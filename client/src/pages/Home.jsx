@@ -10,6 +10,7 @@ import Catalog from "../components/Catalog";
 import Users from "../components/Users";
 import MyBorrowedBooks from "../components/MyBorrowedBooks"
 import Settings from "../components/Settings";
+import ProfilePage from "../components/ProfilePage";
 const Home = () => {
   const [isSideBarOpen, setIsSideBarOpen] = useState(false);
   const [selectedComponent, setSelectedComponent] = useState("");
@@ -36,8 +37,10 @@ const Home = () => {
         />
         {(() => {
           switch (selectedComponent) {
+            case "Profile":
+                return <ProfilePage />;
             case "Dashboard":
-              return user?.role === "User" ? (
+              return user?.role === "Member" ? (
                 <UserDashboard />
               ) : (
                 <AdminDashboard />
@@ -45,12 +48,12 @@ const Home = () => {
             case "Books":
               return <BookManagement />;
             case "Catalog":
-              if (user.role === "Admin") {
+              if (user.role === "Admin" || user.role === "Librarian") {
                 return <Catalog />;
               }
               break;
             case "Users":
-              if (user.role === "Admin") {
+              if (user.role === "Admin" || user.role === "Librarian") {
                 return <Users />;
               }
                   break;
@@ -62,7 +65,7 @@ const Home = () => {
             case "My Borrowed Books":
               return <MyBorrowedBooks />;
             default:
-              return user?.role === "User" ? (
+              return user?.role === "Member" ? (
                 <UserDashboard />
               ) : (
                 <AdminDashboard />

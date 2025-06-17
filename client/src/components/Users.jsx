@@ -5,6 +5,7 @@ import { Edit, UserPlus } from "lucide-react";
 import EditUserPopup from "../popups/EditUserPopup";
 import AddStaffPopup from "../popups/AddStaffPopup"; 
 import { fetchAllUsers } from "../store/slices/userSlice";
+import { current } from "@reduxjs/toolkit";
 
 const Users = () => {
   const dispatch = useDispatch();
@@ -32,13 +33,15 @@ const Users = () => {
         <Header />
         <header className="flex flex-col gap-3 md:flex-row md:justify-between md:items-center">
           <h2 className="text-xl font-medium md:text-2xl md:font-semibold ">Registered Users</h2>
-          <button
-            onClick={() => setIsAddStaffPopupOpen(true)}
-            className="flex items-center justify-center gap-2 px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800"
-          >
-            <UserPlus size={20} />
-            Add Staff Member
-          </button>
+          {users.role === 'Admin' && (
+              <button
+              onClick={() => setIsAddStaffPopupOpen(true)}
+              className="flex items-center justify-center gap-2 px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800"
+            >
+              <UserPlus size={20} />
+              Add Staff Member
+            </button>
+          )}
         </header>
         
         <div className="mt-6 overflow-auto bg-white rounded-md shadow-lg">
@@ -66,9 +69,11 @@ const Users = () => {
                   </td>
                   <td className="px-4 py-4 whitespace-nowrap text-center">{user.borrowedBooks?.length || 0}</td>
                   <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
+                  {users.role === 'Admin' && (
                     <button onClick={() => openEditPopup(user)} className="text-indigo-600 hover:text-indigo-900">
-                      <Edit size={20} />
-                    </button>
+                    <Edit size={20} />
+                      </button>
+                      )}
                   </td>
                 </tr>
               ))}

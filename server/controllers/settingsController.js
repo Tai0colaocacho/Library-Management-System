@@ -1,7 +1,8 @@
 import { catchAsyncErrors } from "../middlewares/catchAsyncErrors.js";
 import ErrorHandler from "../middlewares/errorMiddlewares.js";
 import { Settings } from "../models/settingsModel.js";
-
+import { User } from "../models/userModel.js";
+import { Notification } from "../models/notificationModel.js";
 
 export const getSettings = catchAsyncErrors(async (req, res, next) => {
     const settings = await Settings.getSettings(); 
@@ -18,37 +19,55 @@ export const getSettings = catchAsyncErrors(async (req, res, next) => {
 export const updateSettings = catchAsyncErrors(async (req, res, next) => {
     const currentSettings = await Settings.getSettings();
     if (!currentSettings) {
-         return next(new ErrorHandler("Settings not found. Cannot update.", 500));
+        return next(new ErrorHandler("Settings not found. Cannot update.", 500));
     }
 
-    
-    const allowedUpdates = [
-        'library_name', 'loan_period_days', 'max_books_per_user', 
-        'fine_per_day', 'grace_period_days', 'pickup_time_limit_hours',
-        'password_min_length', 'password_requires_special_char' 
-    ];
+    const oldSettings = currentSettings.toObject();
+    const updatedSettings = await Settings.findByIdAndUpdate(currentSettings._id, req.body, {
+        new: true,
+        runValidators: true,
+        useFindAndModify: false,
+    });
 
-    for (const key in req.body) {
-        if (allowedUpdates.includes(key) && req.body[key] !== undefined) {
-            
-            if (['loan_period_days', 'max_books_per_user', 'fine_per_day', 'grace_period_days', 'pickup_time_limit_hours', 'password_min_length'].includes(key)) {
-                if (isNaN(parseFloat(req.body[key])) || parseFloat(req.body[key]) < 0) {
-                    return next(new ErrorHandler(`Invalid value for ${key}. Must be a non-negative number.`, 400));
-                }
-                 currentSettings[key] = parseFloat(req.body[key]);
-            } else if (['password_requires_special_char'].includes(key)) {
-                 if (typeof req.body[key] !== 'boolean') {
-                    return next(new ErrorHandler(`Invalid value for ${key}. Must be true or false.`, 400));
-                }
-                currentSettings[key] = req.body[key];
-            }
-            else {
-                currentSettings[key] = req.body[key];
-            }
+    const generalChanges = [];
+    const passwordPolicyChanges = [];
+
+    const generalKeys = ['library_name', 'loan_period_days', 'max_books_per_user', 'fine_per_day', 'grace_period_days', 'pickup_time_limit_hours', 'lost_book_fee_multiplier'];
+    const passwordKeys = ['password_min_length', 'password_requires_special_char'];
+
+    generalKeys.forEach(key => {
+        if (oldSettings[key] != updatedSettings[key]) {
+            generalChanges.push(`'${key.replace(/_/g, ' ')}' from '${oldSettings[key]}' to '${updatedSettings[key]}'`);
         }
+    });
+
+    passwordKeys.forEach(key => {
+        if (oldSettings[key] != updatedSettings[key]) {
+            passwordPolicyChanges.push(`'${key.replace(/_/g, ' ')}' from '${oldSettings[key]}' to '${updatedSettings[key]}'`);
+        }
+    });
+
+    const usersToNotify = await User.find({ role: { $in: ['Member', 'Librarian'] } }, '_id');
+
+    if (generalChanges.length > 0 && usersToNotify.length > 0) {
+        const messageContent = `The library's general policy has been updated. Changes: ${generalChanges.join(', ')}.`;
+        const notifications = usersToNotify.map(user => ({
+            recipient_id: user._id,
+            message_content: messageContent,
+            type: 'POLICY_CHANGE_ADMIN',
+        }));
+        await Notification.insertMany(notifications);
     }
 
-    const updatedSettings = await currentSettings.save(); 
+    if (passwordPolicyChanges.length > 0 && usersToNotify.length > 0) {
+        const messageContent = `The library's password policy has changed. These new rules will apply the next time you change or reset your password. Changes: ${passwordPolicyChanges.join(', ')}.`;
+        const notifications = usersToNotify.map(user => ({
+            recipient_id: user._id,
+            message_content: messageContent,
+            type: 'ACCOUNT_UPDATE',
+        }));
+        await Notification.insertMany(notifications);
+    }
 
     res.status(200).json({
         success: true,

@@ -21,8 +21,6 @@ async function createNotification(userId, type, messageContent, relatedLink = nu
     }
 }
 
-
-
 const handleOverdueBooks = async () => {
     try {
         const settings = await Settings.getSettings();

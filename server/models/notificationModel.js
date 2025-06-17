@@ -24,7 +24,7 @@ const notificationSchema = new mongoose.Schema({
             'ACCOUNT_UPDATE',               // Thông báo về tài khoản
             'NEW_RESERVATION_ADMIN',        // Thông báo có sách mới được đặt giữ chỗ (cho admin/librarian)
             'OVERDUE_PROCESSING_ADMIN',     // Thông báo có sách quá hạn cần xử lý (cho admin/librarian) 
-            'POLICY_CHANGE_ADMIN'           // Thông báo khi thư viện thay đổi các chính sách (cho admin/librarian) 
+            'POLICY_CHANGE_ADMIN'           // Thông báo khi thư viện thay đổi các chính sách
         ]
     },
     status: {

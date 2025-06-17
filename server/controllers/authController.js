@@ -8,52 +8,57 @@ import { sendToken } from "../utils/sendToken.js";
 import { sendEmail } from "../utils/sendEmail.js";
 import { generateForgotPasswordEmailTemplate} from "../utils/emailTemplates.js";
 import { Settings } from "../models/settingsModel.js";
+import { v2 as cloudinary } from 'cloudinary';
 
+const validatePassword = (password, settings) => {
+    if (settings) {
+        if (password.length < settings.password_min_length) {
+            return `Password must be at least ${settings.password_min_length} characters long.`;
+        }
+        if (settings.password_requires_special_char) {
+            const specialCharRegex = /[!@#$%^&*(),.?":{}|<>]/;
+            if (!specialCharRegex.test(password)) {
+                return "Password must contain at least one special character.";
+            }
+        }
+    } else {
+        if (password.length < 8) {
+            return "Password must be at least 8 characters long.";
+        }
+    }
+    return null; 
+};
 
-// FR-AUTH-01: Đăng ký tài khoản Member [cite: 26]
 export const register = catchAsyncErrors(async (req, res, next) => {
-    const { name, email, password, confirmPassword } = req.body; 
-    const settings = await Settings.getSettings(); 
+    const { name, email, password, confirmPassword } = req.body;
+    const settings = await Settings.getSettings();
 
-    if (!name || !email || !password || !confirmPassword) { // [cite: 27]
+    if (!name || !email || !password || !confirmPassword) {
         return next(new ErrorHandler("Please enter all fields.", 400));
     }
     if (password !== confirmPassword) {
         return next(new ErrorHandler("Passwords do not match.", 400));
     }
 
+    const passwordError = validatePassword(password, settings);
+    if (passwordError) {
+        return next(new ErrorHandler(passwordError, 400));
+    }
+
     const isRegisteredAndVerified = await User.findOne({ email, accountVerified: true });
     if (isRegisteredAndVerified) {
-        return next(new ErrorHandler("User with this email already registered and verified.", 400)); 
+        return next(new ErrorHandler("User with this email already registered and verified.", 400));
     }
-
-    if (settings) {
-        if (password.length < settings.password_min_length) {
-            return next(new ErrorHandler(`Password must be at least ${settings.password_min_length} characters long.`, 400));
-        }
-    } else {
-         if (password.length < 8) {
-            return next(new ErrorHandler("Password must be at least 8 characters long.", 400));
-        }
-    }
-
-
+    
     await User.deleteMany({ email, accountVerified: false });
 
-
     const hashedPassword = await bcrypt.hash(password, 10);
-    const user = await User.create({
-        name,
-        email,
-        password: hashedPassword,
-        role: "Member",
-    });
+    const user = await User.create({ name, email, password: hashedPassword, role: "Member" });
 
     const verificationCode = user.generateVerificationCode();
     await user.save();
 
-    await sendVerificationCode(verificationCode, email, name, res, next); 
-
+    await sendVerificationCode(verificationCode, email, name, res, next);
 });
 
 export const verifyOTP = catchAsyncErrors(async (req, res, next) => {
@@ -169,7 +174,7 @@ export const forgotPassword = catchAsyncErrors(async (req, res, next) => {
 
 export const resetPassword = catchAsyncErrors(async (req, res, next) => {
     const { token } = req.params;
-    const { password, confirmPassword } = req.body; 
+    const { password, confirmPassword } = req.body;
 
     if (!password || !confirmPassword) {
         return next(new ErrorHandler("Password and confirm password are required.", 400));
@@ -179,19 +184,12 @@ export const resetPassword = catchAsyncErrors(async (req, res, next) => {
     }
 
     const settings = await Settings.getSettings();
-    if (settings) {
-         if (password.length < settings.password_min_length) {
-            return next(new ErrorHandler(`Password must be at least ${settings.password_min_length} characters long.`, 400));
-        }
-    } else {
-        if (password.length < 8) {
-            return next(new ErrorHandler("Password must be at least 8 characters long.", 400));
-        }
+    const passwordError = validatePassword(password, settings);
+    if (passwordError) {
+        return next(new ErrorHandler(passwordError, 400));
     }
 
-
     const resetPasswordToken = crypto.createHash("sha256").update(token).digest("hex");
-
     const user = await User.findOne({
         resetPasswordToken,
         resetPasswordExpire: { $gt: Date.now() },
@@ -203,11 +201,8 @@ export const resetPassword = catchAsyncErrors(async (req, res, next) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
     user.password = hashedPassword;
-    user.resetPasswordToken = undefined; 
+    user.resetPasswordToken = undefined;
     user.resetPasswordExpire = undefined;
-    // user.is_active = true; 
-    // user.accountVerified = true;
-
     await user.save();
 
     sendToken(user, 200, "Password reset successfully. You are now logged in.", res);

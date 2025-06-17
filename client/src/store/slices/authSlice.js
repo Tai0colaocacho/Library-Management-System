@@ -1,6 +1,7 @@
 import { createSlice } from '@reduxjs/toolkit'
 import axios from 'axios'
 import { act } from 'react';
+import { toast } from 'react-toastify';
 
 const authSlice = createSlice({
     name: 'auth',
@@ -265,5 +266,21 @@ export const updatePassword = (data) => async (dispatch) => {
         dispatch(authSlice.actions.updatePasswordFailed(error.response.data.message))
     })
 }
+
+export const updateMyProfile = (data) => async (dispatch) => {
+    dispatch(authSlice.actions.updatePasswordRequest()); 
+    try {
+        const res = await axios.put("http://localhost:4000/api/v1/auth/me/profile/update", data, {
+            withCredentials: true,
+        });
+        dispatch(authSlice.actions.updatePasswordSuccess(res.data.message)); 
+        toast.success(res.data.message);
+        dispatch(getUser()); 
+    } catch (error) {
+        const errorMessage = error.response?.data?.message || "Failed to update profile.";
+        dispatch(authSlice.actions.updatePasswordFailed(errorMessage)); 
+        toast.error(errorMessage);
+    }
+};
 
 export default authSlice.reducer;
