@@ -1,10 +1,24 @@
 import { useSelector, useDispatch } from 'react-redux';
-import { markAsRead, markAllAsRead } from '../store/slices/notificationSlice';
+import { markAsRead, markAllAsRead, fetchNotifications } from '../store/slices/notificationSlice';
 import { Bell, CheckCheck } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react'; 
+import { NOTIFICATION_TYPE_DISPLAY, getNotificationTypesForRole } from '../utils/notificationUtils'; 
 
 const NotificationPanel = ({ closePanel }) => {
     const dispatch = useDispatch();
     const { notifications, unreadCount, loading } = useSelector(state => state.notifications);
+    const { user } = useSelector(state => state.auth); 
+    const [filterType, setFilterType] = useState(''); 
+
+    const availableFilters = useMemo(() => getNotificationTypesForRole(user?.role), [user?.role]);
+
+    useEffect(() => {
+        const filters = {};
+        if (filterType) {
+            filters.type = filterType;
+        }
+        dispatch(fetchNotifications(filters));
+    }, [dispatch, filterType]);
 
     const handleMarkAsRead = (id) => {
         dispatch(markAsRead(id));
@@ -22,7 +36,31 @@ const NotificationPanel = ({ closePanel }) => {
                     <button onClick={handleMarkAll} className="text-sm text-blue-600 hover:underline">Mark all as read</button>
                 )}
             </div>
-            <div className="max-h-96 overflow-y-auto">
+            {availableFilters.length > 0 && (
+                <div className="p-2 border-b">
+                    <select 
+                        value={filterType} 
+                        onChange={(e) => setFilterType(e.target.value)}
+                        className="w-full p-1.5 border border-gray-300 rounded-md text-sm"
+                    >
+                        <option value="">All Types</option>
+                        {availableFilters.map(type => (
+                            <option key={type} value={type}>
+                                {NOTIFICATION_TYPE_DISPLAY[type] || type}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+            )}
+
+            <div className="max-h-80 overflow-y-auto">
+                {loading && <p className="p-4 text-center text-gray-500">Loading...</p>}
+                {!loading && notifications.length === 0 && (
+                    <div className="p-6 text-center text-gray-500">
+                        <Bell className="mx-auto h-12 w-12 text-gray-400"/>
+                        <p className="mt-2">No notifications match your filter.</p>
+                    </div>
+                )}
                 {loading && <p className="p-4 text-center text-gray-500">Loading...</p>}
                 {!loading && notifications.length === 0 && (
                     <div className="p-6 text-center text-gray-500">

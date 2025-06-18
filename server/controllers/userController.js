@@ -3,7 +3,7 @@ import ErrorHandler from "../middlewares/errorMiddlewares.js";
 import { User } from "../models/userModel.js";
 import bcrypt from 'bcrypt';
 import { v2 as cloudinary } from 'cloudinary';
-
+import { Notification } from "../models/notificationModel.js";
 
 
 export const getAllUsers = catchAsyncErrors(async (req, res, next) => {
@@ -86,6 +86,13 @@ export const createStaffOrMember = catchAsyncErrors(async (req, res, next) => {
         accountVerified: true,
     });
 
+    const welcomeMessage = `Welcome to the library, <b>${user.name}</b>! Your account has been successfully created and is ready for use.`;
+    await Notification.create({
+        recipient_id: user._id,
+        message_content: welcomeMessage,
+        type: 'ACCOUNT_UPDATE'
+    });
+
     res.status(201).json({
         success: true,
         message: `${role} account created successfully.`,
@@ -159,6 +166,14 @@ export const updateUserAccountByAdmin = catchAsyncErrors(async (req, res, next) 
 
 
     await userToUpdate.save();
+
+    const adminUpdater = req.user;
+    const memberMessage = `Your account was just updated by an administrator (<b>${adminUpdater.name}</b>). Please review your profile information.`;
+    await Notification.create({
+        recipient_id: userToUpdate._id,
+        message_content: memberMessage,
+        type: 'ACCOUNT_UPDATE',
+    });
 
     res.status(200).json({
         success: true,

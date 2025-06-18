@@ -1,7 +1,8 @@
 import PropTypes from 'prop-types';
 import { useDispatch, useSelector } from 'react-redux';
 import { toast } from 'react-toastify';
-import { reserveCopy } from '../store/slices/borrowSlice';
+import { reserveCopy, fetchUserBorrowedBooks } from '../store/slices/borrowSlice';
+import { fetchAllBooks } from '../store/slices/bookSlice';
 import { useState, useMemo, useEffect } from 'react';
 
 const BookDetailPopup = ({ book, closePopup }) => {
@@ -63,24 +64,20 @@ const BookDetailPopup = ({ book, closePopup }) => {
 
     const handleReserve = async () => {
         if (!selectedCopyId || selectedCopyStatus !== 'Available') return;
-
-        try {
-            const action = await dispatch(reserveCopy(selectedCopyId, book._id));
-            const result = action.payload;
-
-            if (result?.success) {
-                setCopiesState((prev) =>
-                    prev.map((copy) =>
-                        copy._id === selectedCopyId ? { ...copy, status: 'Reserved' } : copy
-                    )
-                );
-                setSelectedCopyId(null);
-                setSelectedCopyStatus(null);
+    
+        dispatch(reserveCopy({ copyId: selectedCopyId, bookId: book._id }))
+            .unwrap()
+            .then((result) => {
                 toast.success("Reservation successful!");
-            }
-        } catch (err) {
-            toast.error(err.response?.data?.message || "Reservation failed.");
-        }
+
+                dispatch(fetchUserBorrowedBooks());
+                dispatch(fetchAllBooks());
+
+                closePopup();
+            })
+            .catch((error) => {
+                toast.error(error || "An unknown error occurred.");
+            });
     };
 
     return (

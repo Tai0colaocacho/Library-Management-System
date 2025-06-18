@@ -3,7 +3,8 @@ import { useDispatch, useSelector } from "react-redux";
 import { fetchAllBorrowedBooks, confirmPickup, returnBookAdmin, renewBook } from "../store/slices/borrowSlice"; 
 import Header from "../layout/Header";
 import ReportStatusPopup from "../popups/ReportStatusPopup";
-import { Search } from "lucide-react";
+import { Search, BookUp } from "lucide-react";
+import DirectBorrowPopup from "../popups/DirectBorrowPopup";
 const Catalog = () => {
   const dispatch = useDispatch();
   const { allBorrowedBooks = [], loading } = useSelector((state) => state.borrow);
@@ -12,6 +13,7 @@ const Catalog = () => {
   const [searchTerm, setSearchTerm] = useState(""); 
   const [isReportPopupOpen, setIsReportPopupOpen] = useState(false);
   const [selectedBorrowing, setSelectedBorrowing] = useState(null);
+  const [isDirectBorrowPopupOpen, setIsDirectBorrowPopupOpen] = useState(false);
 
   useEffect(() => {
     dispatch(fetchAllBorrowedBooks());
@@ -56,7 +58,13 @@ const Catalog = () => {
         <Header />
         <header className="flex flex-col gap-4 md:flex-row md:justify-between md:items-center mb-4">
             <h2 className="text-xl font-medium md:text-2xl md:font-semibold">Transaction Management</h2>
-            {/* Thanh tìm kiếm */}
+            <button 
+                onClick={() => setIsDirectBorrowPopupOpen(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+            >
+                <BookUp size={18} />
+                Direct Borrow
+            </button>
             <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
                 <input
@@ -134,6 +142,7 @@ const Catalog = () => {
           </table>
         </div>
       </main>
+      {isDirectBorrowPopupOpen && <DirectBorrowPopup closePopup={() => setIsDirectBorrowPopupOpen(false)} />}
       {isReportPopupOpen && <ReportStatusPopup borrowing={selectedBorrowing} closePopup={() => setIsReportPopupOpen(false)} />}
     </>
   );

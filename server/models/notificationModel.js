@@ -32,9 +32,6 @@ const notificationSchema = new mongoose.Schema({
         enum: ['unread', 'read'],
         default: 'unread'
     },
-    related_link: { 
-        type: String
-    },
     created_at: {
         type: Date,
         default: Date.now

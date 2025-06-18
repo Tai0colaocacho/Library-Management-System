@@ -4,6 +4,7 @@ import { Book } from "../models/bookModel.js";
 import { Borrowing } from "../models/borrowingModel.js"; 
 import { User } from "../models/userModel.js";
 import { Settings } from "../models/settingsModel.js";
+import { Notification } from "../models/notificationModel.js";
 // import { calculateFine } from "../utils/fineCalculator.js"; 
 
 const calculateFineForReturn = (dueDate, returnDate, finePerDay, gracePeriodDays = 0) => {
@@ -21,10 +22,10 @@ const calculateFineForReturn = (dueDate, returnDate, finePerDay, gracePeriodDays
 
 export const reserveBook = catchAsyncErrors(async (req, res, next) => {
     const memberId = req.user._id; 
-    const { bookId } = req.body;
+    const { bookId, copyId } = req.body; 
 
-    if (!bookId) {
-        return next(new ErrorHandler("Book ID is required to reserve.", 400));
+    if (!bookId || !copyId) { 
+        return next(new ErrorHandler("Book ID and Copy ID are required to reserve.", 400));
     }
 
     const member = await User.findById(memberId);
@@ -54,17 +55,13 @@ export const reserveBook = catchAsyncErrors(async (req, res, next) => {
         return next(new ErrorHandler(`You have reached the maximum limit of ${settings.max_books_per_user} borrowed/reserved books.`, 400));
     }
 
-    const overdueBooksCount = await Borrowing.countDocuments({
-        "user.id": memberId,
-        status: 'Overdue'
-    });
-    if (settings.preventReservationOnOverdue && overdueBooksCount > 0) { 
-         return next(new ErrorHandler("You have overdue books. Please return them before reserving new ones.", 403));
+    const specificCopy = book.copies.id(copyId);
+    if (!specificCopy) {
+        return next(new ErrorHandler("This specific book copy does not exist.", 404));
     }
 
-    const availableCopy = book.copies.find(copy => copy.status === 'Available');
-    if (!availableCopy) {
-        return next(new ErrorHandler("No available copies of this book to reserve.", 400));
+    if (specificCopy.status !== 'Available') {
+        return next(new ErrorHandler(`This copy is currently ${specificCopy.status} and cannot be reserved.`, 400));
     }
 
     const reservation_date = new Date();
@@ -76,18 +73,36 @@ export const reserveBook = catchAsyncErrors(async (req, res, next) => {
             email: member.email,
         },
         book: book._id,
-        copy_id: availableCopy._id, 
+        copy_id: specificCopy._id,
         status: 'Reserved',
         reservation_date: reservation_date,
         pickup_due_date: pickup_due_date,
     });
 
-    availableCopy.status = 'Reserved';
+    specificCopy.status = 'Reserved'; 
     await book.save();
+
+    const memberMessage = `You have successfully reserved the book "<b>${book.title}</b>". Please pick it up by ${newReservation.pickup_due_date.toLocaleString('en-US')}.`;
+    await Notification.create({
+        recipient_id: member._id,
+        message_content: memberMessage,
+        type: 'RESERVATION_SUCCESS',
+    });
+    
+    const staffUsers = await User.find({ role: { $in: ['Admin', 'Librarian'] } });
+    const staffMessage = `Member <b>${member.name}</b> has just reserved the book "<b>${book.title}</b>".`;
+    const staffNotifications = staffUsers.map(staff => ({
+        recipient_id: staff._id,
+        message_content: staffMessage,
+        type: 'NEW_RESERVATION_ADMIN',
+    }));
+    if (staffNotifications.length > 0) {
+        await Notification.insertMany(staffNotifications);
+    }
 
     res.status(201).json({
         success: true,
-        message: `Book '${book.title}' reserved successfully. Please pick it up by ${pickup_due_date.toLocaleString()}.`, // [cite: 94]
+        message: `Book '${book.title}' reserved successfully. Please pick it up by ${pickup_due_date.toLocaleString()}.`,
         reservation: newReservation,
     });
 });
@@ -140,6 +155,12 @@ export const confirmPickup = catchAsyncErrors(async (req, res, next) => {
     copy.status = 'Borrowed'; 
     await book.save();
 
+    const memberMessage = `You have successfully borrowed the book "<b>${book.title}</b>". The due date is <b>${reservation.due_date.toLocaleDateString('en-US')}</b>.`;
+    await Notification.create({
+        recipient_id: reservation.user.id,
+        message_content: memberMessage,
+        type: 'BORROW_SUCCESS',
+    });
 
     res.status(200).json({
         success: true,
@@ -190,6 +211,16 @@ export const returnBook = catchAsyncErrors(async (req, res, next) => {
         message += ` A fine of $${fineAmount.toFixed(2)} has been applied.`;
     }
 
+    let memberMessage = `You have successfully returned the book "<b>${book.title}</b>".`;
+    if (borrowing.fine > 0) {
+        memberMessage += ` An overdue fine of <b>$${borrowing.fine.toFixed(2)}</b> has been applied.`;
+    }
+    await Notification.create({
+        recipient_id: borrowing.user.id,
+        message_content: memberMessage,
+        type: 'RETURN_SUCCESS',
+    });
+
     res.status(200).json({
         success: true,
         message: message,
@@ -219,10 +250,16 @@ export const renewBook = catchAsyncErrors(async (req, res, next) => {
     // }
     const new_due_date = new Date(new Date(borrowing.due_date).getTime() + settings.loan_period_days * 24 * 60 * 60 * 1000);
     borrowing.due_date = new_due_date; 
-    // borrowing.status = 'Renewed'; // Optional: or keep as 'Borrowed' [cite: 118]
-    // borrowing.renewal_count = (borrowing.renewal_count || 0) + 1; // Example for tracking renewals
 
     await borrowing.save();
+
+    const book = await Book.findById(borrowing.book);
+    const memberMessage = `Your renewal request for "<b>${book.title}</b>" has been approved. The new due date is <b>${borrowing.due_date.toLocaleDateString('en-US')}</b>.`;
+    await Notification.create({
+        recipient_id: borrowing.user.id,
+        message_content: memberMessage,
+        type: 'ACCOUNT_UPDATE',
+    });
 
     res.status(200).json({
         success: true,
@@ -270,6 +307,14 @@ export const cancelReservation = catchAsyncErrors(async (req, res, next) => {
             await book.save();
         }
     }
+
+    const memberMessage = `Your reservation for the book "<b>${book.title}</b>" has been cancelled.`;
+    await Notification.create({
+        recipient_id: reservation.user.id,
+        message_content: memberMessage,
+        type: 'ACCOUNT_UPDATE',
+    });
+
 
     res.status(200).json({
         success: true,
@@ -346,11 +391,77 @@ export const reportBookLostOrDamaged = catchAsyncErrors(async (req, res, next) =
 
     await borrowing.save();
 
-    const totalFee = overdueFine + replacementFee;
+    const totalFee = borrowing.fine + borrowing.replacement_fee;
+    const memberMessage = `The book "<b>${book.title}</b>" you borrowed has been marked as <b>${finalStatus}</b>. A total fee of <b>$${totalFee.toFixed(2)}</b> has been applied to your account.`;
+    await Notification.create({
+        recipient_id: borrowing.user.id,
+        message_content: memberMessage,
+        type: 'ACCOUNT_UPDATE',
+    });
 
     res.status(200).json({
         success: true,
         message: `Book copy marked as ${finalStatus}. Total fee applied is $${totalFee.toFixed(2)} (Overdue: $${overdueFine.toFixed(2)}, Replacement: $${replacementFee.toFixed(2)}).`,
         borrowing,
+    });
+});
+
+export const directBorrow = catchAsyncErrors(async (req, res, next) => {
+    const { memberEmail, bookIsbn } = req.body;
+    if (!memberEmail || !bookIsbn) {
+        return next(new ErrorHandler("Member Email and Book ISBN are required.", 400));
+    }
+
+    const member = await User.findOne({ email: memberEmail });
+    if (!member) return next(new ErrorHandler(`Member with email ${memberEmail} not found.`, 404));
+
+    const book = await Book.findOne({ isbn: bookIsbn });
+    if (!book) return next(new ErrorHandler(`Book with ISBN ${bookIsbn} not found.`, 404));
+
+    const settings = await Settings.getSettings();
+    if (!settings) return next(new ErrorHandler("System settings not found.", 500));
+
+    if (!member.is_active) {
+        return next(new ErrorHandler("Member's account is inactive.", 403));
+    }
+
+    const existingBorrowsAndReservations = await Borrowing.countDocuments({
+        "user.id": member._id,
+        status: { $in: ['Reserved', 'Borrowed', 'Overdue'] }
+    });
+
+    if (existingBorrowsAndReservations >= settings.max_books_per_user) {
+        return next(new ErrorHandler(`Member has reached the limit of ${settings.max_books_per_user} books.`, 400));
+    }
+
+    const availableCopy = book.copies.find(copy => copy.status === 'Available');
+    if (!availableCopy) {
+        return next(new ErrorHandler("No available copies of this book to borrow.", 400));
+    }
+
+    const borrow_date = new Date();
+    const due_date = new Date(borrow_date.getTime() + settings.loan_period_days * 24 * 60 * 60 * 1000);
+
+    const newBorrowing = await Borrowing.create({
+        user: {
+            id: member._id,
+            name: member.name,
+            email: member.email,
+        },
+        book: book._id,
+        copy_id: availableCopy._id,
+        status: 'Borrowed',
+        borrow_date: borrow_date,
+        due_date: due_date,
+    });
+
+    availableCopy.status = 'Borrowed';
+    book.borrowCount = (book.borrowCount || 0) + 1;
+    await book.save();
+
+    res.status(201).json({
+        success: true,
+        message: "Book borrowed successfully.",
+        borrowing: newBorrowing,
     });
 });

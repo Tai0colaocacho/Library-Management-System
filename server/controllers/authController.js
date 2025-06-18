@@ -9,6 +9,7 @@ import { sendEmail } from "../utils/sendEmail.js";
 import { generateForgotPasswordEmailTemplate} from "../utils/emailTemplates.js";
 import { Settings } from "../models/settingsModel.js";
 import { v2 as cloudinary } from 'cloudinary';
+import { Notification } from "../models/notificationModel.js";
 
 const validatePassword = (password, settings) => {
     if (settings) {
@@ -136,7 +137,7 @@ export const getUser = catchAsyncErrors(async (req, res, next) => {
 });
 
 export const forgotPassword = catchAsyncErrors(async (req, res, next) => {
-    if (!req.body.email) { // [cite: 48]
+    if (!req.body.email) { 
         return next(new ErrorHandler("Email is required.", 400));
     }
     const user = await User.findOne({
@@ -243,6 +244,13 @@ export const updatePassword = catchAsyncErrors(async (req, res, next) => {
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     user.password = hashedPassword;
     await user.save();
+
+    const messageContent = `Your password was successfully changed at ${new Date().toLocaleString('en-US')}. If you did not perform this action, please contact an administrator immediately.`;
+    await Notification.create({
+        recipient_id: user._id,
+        message_content: messageContent,
+        type: 'ACCOUNT_UPDATE'
+    });
 
     res.status(200).json({
         success: true,

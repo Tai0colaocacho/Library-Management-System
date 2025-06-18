@@ -5,11 +5,16 @@ import { Notification } from "../models/notificationModel.js";
 
 export const getMyNotifications = catchAsyncErrors(async (req, res, next) => {
     const userId = req.user._id;
-    const { page = 1, limit = 10, status } = req.query;
+    const { page = 1, limit = 10, status, type } = req.query;
 
     const query = { recipient_id: userId };
+
     if (status && ['read', 'unread'].includes(status)) {
         query.status = status;
+    }
+
+    if (type) {
+        query.type = type;
     }
 
     const notifications = await Notification.find(query)

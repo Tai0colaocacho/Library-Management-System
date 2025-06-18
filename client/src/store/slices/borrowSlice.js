@@ -1,7 +1,8 @@
-import { createSlice } from "@reduxjs/toolkit"
+import { createSlice, createAsyncThunk } from "@reduxjs/toolkit"
 import axios from "axios"
 import { toggleRecordBookPopup } from "./popUpSlice";
 import { toast } from 'react-toastify';
+
 const borrowSlice = createSlice({
     name: "borrowings",
     initialState: {
@@ -108,26 +109,27 @@ export const fetchAllBorrowedBooks = () => async (dispatch) => {
         dispatch(borrowSlice.actions.fetchAllBorrowedBooksFailed(err.response.data.message))
     })
 }
-export const reserveCopy = (copyId, bookId) => async (dispatch) => {
-    dispatch(borrowSlice.actions.reserveCopyRequest());
-    try {
-        const res = await axios.post(
-            `http://localhost:4000/api/v1/borrowings/reserve`,
-            { copyId, bookId },
-            {
-                withCredentials: true,
-                headers: {
-                    "Content-Type": "application/json",
-                },
-            }
-        );
-        dispatch(borrowSlice.actions.reserveCopySuccess(res.data.message));
-        toast.success(res.data.message);
-    } catch (err) {
-        dispatch(borrowSlice.actions.reserveCopyFailed(err.response?.data?.message || "Reservation failed."));
-        toast.error(err.response?.data?.message || "Reservation failed.");
+
+export const reserveCopy = createAsyncThunk(
+    'borrowings/reserveCopy',
+    async ({ copyId, bookId }, { dispatch, rejectWithValue }) => {
+        try {
+            const res = await axios.post(
+                `http://localhost:4000/api/v1/borrowings/reserve`, 
+                { bookId: bookId, copyId: copyId },
+                { withCredentials: true }
+            );
+            // dispatch(fetchUserBorrowedBooks());
+            // dispatch(fetchAllBooks()); 
+            
+            return res.data;
+        } catch (err) {
+            const message = err.response?.data?.message || "Reservation failed.";
+            // toast.error(message);
+            return rejectWithValue(message);
+        }
     }
-};
+);
 
 
 export const recordBorrowBook = (email, id) => async (dispatch) => {
@@ -213,5 +215,21 @@ export const cancelReservation = (borrowingId) => async (dispatch) => {
         return { success: false, message: errorMessage };
     }
 };
+
+export const directBorrowBook = createAsyncThunk(
+    'borrowings/directBorrow',
+    async (borrowData, { dispatch, rejectWithValue }) => {
+        try {
+            const response = await axios.post("http://localhost:4000/api/v1/borrowings/admin/direct-borrow", borrowData, { withCredentials: true });
+            toast.success(response.data.message);
+            dispatch(fetchAllBorrowedBooks());  
+            return response.data;
+        } catch (error) {
+            const message = error.response?.data?.message || "Direct borrow failed.";
+            toast.error(message);
+            return rejectWithValue(message);
+        }
+    }
+);
 
 export default borrowSlice.reducer;

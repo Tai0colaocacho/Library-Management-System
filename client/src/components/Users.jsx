@@ -3,16 +3,17 @@ import { useSelector, useDispatch } from "react-redux";
 import Header from "../layout/Header";
 import { Edit, UserPlus } from "lucide-react";
 import EditUserPopup from "../popups/EditUserPopup";
-import AddStaffPopup from "../popups/AddStaffPopup"; 
+import AddUserPopup from "../popups/AddUserPopup";
 import { fetchAllUsers } from "../store/slices/userSlice";
 import { current } from "@reduxjs/toolkit";
 
 const Users = () => {
   const dispatch = useDispatch();
   const { users } = useSelector(state => state.user);
+  const { user: loggedInUser } = useSelector(state => state.auth);
 
   const [isEditPopupOpen, setIsEditPopupOpen] = useState(false);
-  const [isAddStaffPopupOpen, setIsAddStaffPopupOpen] = useState(false);
+  const [isAddUserPopupOpen, setIsAddUserPopupOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
 
   const openEditPopup = (user) => {
@@ -22,7 +23,7 @@ const Users = () => {
 
   const closePopups = () => {
     setIsEditPopupOpen(false);
-    setIsAddStaffPopupOpen(false);
+    setIsAddUserPopupOpen(false);
     setSelectedUser(null);
     dispatch(fetchAllUsers());
   };
@@ -33,13 +34,13 @@ const Users = () => {
         <Header />
         <header className="flex flex-col gap-3 md:flex-row md:justify-between md:items-center">
           <h2 className="text-xl font-medium md:text-2xl md:font-semibold ">Registered Users</h2>
-          {users.role === 'Admin' && (
+          {(loggedInUser?.role === 'Admin' || loggedInUser?.role === 'Librarian') && (
               <button
-              onClick={() => setIsAddStaffPopupOpen(true)}
+              onClick={() => setIsAddUserPopupOpen(true)}
               className="flex items-center justify-center gap-2 px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800"
             >
               <UserPlus size={20} />
-              Add Staff Member
+              Add User
             </button>
           )}
         </header>
@@ -69,7 +70,7 @@ const Users = () => {
                   </td>
                   <td className="px-4 py-4 whitespace-nowrap text-center">{user.borrowedBooks?.length || 0}</td>
                   <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  {users.role === 'Admin' && (
+                  {loggedInUser.role === 'Admin' && (
                     <button onClick={() => openEditPopup(user)} className="text-indigo-600 hover:text-indigo-900">
                     <Edit size={20} />
                       </button>
@@ -84,7 +85,7 @@ const Users = () => {
       </main>
 
       {isEditPopupOpen && <EditUserPopup user={selectedUser} closePopup={closePopups} />}
-      {isAddStaffPopupOpen && <AddStaffPopup closePopup={closePopups} />}
+      {isAddUserPopupOpen && <AddUserPopup closePopup={closePopups} />}
     </>
   );
 };

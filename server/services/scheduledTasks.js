@@ -8,13 +8,12 @@ import { Notification } from '../models/notificationModel.js';
 import { generateDueDateReminderEmailTemplate, generatePickupReminderEmailTemplate, generateOverdueNoticeEmailTemplate, generateReservationCancelledEmailTemplate } from '../utils/emailTemplates.js'; 
 
 
-async function createNotification(userId, type, messageContent, relatedLink = null) {
+async function createNotification(userId, type, messageContent) {
     try {
         await Notification.create({
             recipient_id: userId,
             type: type,
             message_content: messageContent,
-            related_link: relatedLink 
         });
     } catch (error) {
         console.error(`Error creating notification for user ${userId}, type ${type}:`, error);
@@ -44,7 +43,7 @@ const handleOverdueBooks = async () => {
                 const bookDetails = await Book.findById(borrowing.book).select('title');
                 const messageContent = `Your borrowed book "${bookDetails ? bookDetails.title : 'A book'}" is now overdue. Please return it as soon as possible to avoid further fines.`;
 
-                await createNotification(borrowing.user.id._id, 'OVERDUE_NOTICE', messageContent, `/my-borrowings`);
+                await createNotification(borrowing.user.id._id, 'OVERDUE_NOTICE', messageContent);
 
                 if (borrowing.user.id.email) {
                      const emailMessage = generateOverdueNoticeEmailTemplate(borrowing.user.id.name, bookDetails ? bookDetails.title : 'A book', borrowing.due_date);
@@ -92,7 +91,7 @@ const handleExpiredReservations = async () => {
                 const bookDetails = await Book.findById(reservation.book).select('title');
                 const messageContent = `Your reservation for "<span class="math-inline">\{bookDetails ? bookDetails\.title \: 'a book'\}" has been cancelled as it was not picked up by the due date \(</span>{new Date(reservation.pickup_due_date).toLocaleDateString()}).`;
 
-                await createNotification(reservation.user.id._id, 'RESERVATION_CANCELLED_EXPIRED', messageContent, `/my-borrowings`);
+                await createNotification(reservation.user.id._id, 'RESERVATION_CANCELLED_EXPIRED', messageContent);
 
                 if (reservation.user.id.email) {
                      const emailMessage = generateReservationCancelledEmailTemplate(reservation.user.id.name, bookDetails ? bookDetails.title : 'A book', new Date(reservation.pickup_due_date));
@@ -133,7 +132,7 @@ const sendReminders = async () => {
         for (const borrowing of upcomingDueBorrowings) {
             if (borrowing.user && borrowing.user.id) {
                 const messageContent = `Reminder: Your borrowed book "${borrowing.book.title}" is due on ${new Date(borrowing.due_date).toLocaleDateString()}.`;
-                await createNotification(borrowing.user.id._id, 'RETURN_REMINDER', messageContent, `/my-borrowings`);
+                await createNotification(borrowing.user.id._id, 'RETURN_REMINDER', messageContent);
                  if (borrowing.user.id.email) {
                     const emailMessage = generateDueDateReminderEmailTemplate(borrowing.user.id.name, borrowing.book.title, borrowing.due_date);
                     await sendEmail({
@@ -165,7 +164,7 @@ const sendReminders = async () => {
         for (const reservation of upcomingPickups) {
              if (reservation.user && reservation.user.id) {
                 const messageContent = `Reminder: Please pick up your reserved book "${reservation.book.title}" by ${new Date(reservation.pickup_due_date).toLocaleString()}.`;
-                await createNotification(reservation.user.id._id, 'PICKUP_REMINDER', messageContent, `/my-borrowings`);
+                await createNotification(reservation.user.id._id, 'PICKUP_REMINDER', messageContent);
 
                 if (reservation.user.id.email) {
                     const emailMessage = generatePickupReminderEmailTemplate(reservation.user.id.name, reservation.book.title, reservation.pickup_due_date);

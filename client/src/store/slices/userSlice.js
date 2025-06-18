@@ -56,17 +56,18 @@ export const updateUser = (userId, userData) => async (dispatch) => {
     }
 };
 
-export const addStaff = (staffData) => async (dispatch) => {
+export const addUser = (userData) => async (dispatch) => {
     dispatch(userSlice.actions.addNewAdminRequest());
     try {
-        const res = await axios.post("http://localhost:4000/api/v1/users/admin/add-staff", staffData, {
+        const res = await axios.post("http://localhost:4000/api/v1/users/admin/add", userData, {
             withCredentials: true,
             headers: { 'Content-Type': 'application/json' }
         });
         toast.success(res.data.message);
         dispatch(userSlice.actions.addNewAdminSuccess());
+        dispatch(fetchAllUsers());
     } catch (err) {
-        toast.error(err.response?.data?.message || "Failed to add staff member.");
+        toast.error(err.response?.data?.message || "Failed to add user.");
         dispatch(userSlice.actions.addNewAdminFailed());
     }
 };

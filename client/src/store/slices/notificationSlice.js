@@ -4,9 +4,12 @@ import { toast } from "react-toastify";
 
 export const fetchNotifications = createAsyncThunk(
     'notifications/fetchNotifications',
-    async (_, { rejectWithValue }) => {
+    async (filters = {}, { rejectWithValue }) => {
         try {
-            const { data } = await axios.get("http://localhost:4000/api/v1/notifications/my-notifications", { withCredentials: true });
+            const { data } = await axios.get("http://localhost:4000/api/v1/notifications/my-notifications", { 
+                withCredentials: true,
+                params: filters
+            });
             return data;
         } catch (error) {
             return rejectWithValue(error.response.data.message);

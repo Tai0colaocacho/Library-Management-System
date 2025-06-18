@@ -11,7 +11,7 @@ const router = express.Router();
 
 
 router.get('/admin/all', isAuthenticated, isAuthorized("Admin", "Librarian"), getAllUsers);
-router.post('/admin/add-staff', isAuthenticated, isAuthorized("Admin"), createStaffOrMember); 
+router.post('/admin/add', isAuthenticated, isAuthorized("Admin", "Librarian"), createStaffOrMember); 
 router.put('/admin/update/:userId', isAuthenticated, isAuthorized("Admin"), updateUserAccountByAdmin); 
 router.get('/admin/details/:userId', isAuthenticated, isAuthorized("Admin", "Librarian"), getUserDetailsForAdmin); 
 

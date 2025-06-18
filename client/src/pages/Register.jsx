@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import logo from "../assets/black-logo.png";
 import logo_with_title from "../assets/logo-with-title.png";
 import { useDispatch, useSelector } from "react-redux";
@@ -27,7 +27,6 @@ const Register = () => {
   };
 
   useEffect(() => {
-    // Thêm dòng log này để kiểm tra
     console.log("Register useEffect triggered. Message:", message, "Error:", error);
 
     if (isAuthenticated) {
@@ -35,7 +34,6 @@ const Register = () => {
     }
 
     if (message) {
-      // Thêm dòng log này để xem có vào được block này không
       console.log("Success message detected! Navigating to OTP page...");
       toast.success(message);
       navigateTo(`/otp-verification/${email}`);
@@ -47,11 +45,10 @@ const Register = () => {
       toast.error(error);
       dispatch(resetAuthSlice());
     }
-  }, [message, error, isAuthenticated, dispatch, navigateTo, email]); // Đảm bảo dependency array là chính xác
+  }, [message, error, isAuthenticated, dispatch, navigateTo, email]);
 
   return (
     <div className="flex flex-col justify-center md:flex-row h-screen">
-      {/* Phần JSX giữ nguyên... */}
       <div className="hidden w-full md:w-1/2 bg-black text-white md:flex flex-col items-center justify-center p-8 rounded-tr-[80px] rounded-br-[80px]">
         <div className="text-center mb-12 h-[376px]">
           <div className="flex justify-center mb-12">
