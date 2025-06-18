@@ -407,16 +407,16 @@ export const reportBookLostOrDamaged = catchAsyncErrors(async (req, res, next) =
 });
 
 export const directBorrow = catchAsyncErrors(async (req, res, next) => {
-    const { memberEmail, bookIsbn } = req.body;
-    if (!memberEmail || !bookIsbn) {
-        return next(new ErrorHandler("Member Email and Book ISBN are required.", 400));
+    const { memberEmail, copyId } = req.body;
+    if (!memberEmail || !copyId) {
+        return next(new ErrorHandler("Member Email and Copy ID are required.", 400));
     }
 
     const member = await User.findOne({ email: memberEmail });
     if (!member) return next(new ErrorHandler(`Member with email ${memberEmail} not found.`, 404));
 
-    const book = await Book.findOne({ isbn: bookIsbn });
-    if (!book) return next(new ErrorHandler(`Book with ISBN ${bookIsbn} not found.`, 404));
+    const book = await Book.findOne({ "copies._id": copyId });
+    if (!book) return next(new ErrorHandler(`Book containing the specified copy ID not found.`, 404));
 
     const settings = await Settings.getSettings();
     if (!settings) return next(new ErrorHandler("System settings not found.", 500));
@@ -424,38 +424,32 @@ export const directBorrow = catchAsyncErrors(async (req, res, next) => {
     if (!member.is_active) {
         return next(new ErrorHandler("Member's account is inactive.", 403));
     }
-
     const existingBorrowsAndReservations = await Borrowing.countDocuments({
         "user.id": member._id,
         status: { $in: ['Reserved', 'Borrowed', 'Overdue'] }
     });
-
     if (existingBorrowsAndReservations >= settings.max_books_per_user) {
         return next(new ErrorHandler(`Member has reached the limit of ${settings.max_books_per_user} books.`, 400));
     }
 
-    const availableCopy = book.copies.find(copy => copy.status === 'Available');
-    if (!availableCopy) {
-        return next(new ErrorHandler("No available copies of this book to borrow.", 400));
+    const specificCopy = book.copies.id(copyId);
+    if (!specificCopy || specificCopy.status !== 'Available') {
+        return next(new ErrorHandler("This copy is not available for borrowing.", 400));
     }
 
     const borrow_date = new Date();
     const due_date = new Date(borrow_date.getTime() + settings.loan_period_days * 24 * 60 * 60 * 1000);
 
     const newBorrowing = await Borrowing.create({
-        user: {
-            id: member._id,
-            name: member.name,
-            email: member.email,
-        },
+        user: { id: member._id, name: member.name, email: member.email },
         book: book._id,
-        copy_id: availableCopy._id,
+        copy_id: specificCopy._id,
         status: 'Borrowed',
         borrow_date: borrow_date,
         due_date: due_date,
     });
 
-    availableCopy.status = 'Borrowed';
+    specificCopy.status = 'Borrowed';
     book.borrowCount = (book.borrowCount || 0) + 1;
     await book.save();
 

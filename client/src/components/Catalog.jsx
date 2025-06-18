@@ -58,13 +58,6 @@ const Catalog = () => {
         <Header />
         <header className="flex flex-col gap-4 md:flex-row md:justify-between md:items-center mb-4">
             <h2 className="text-xl font-medium md:text-2xl md:font-semibold">Transaction Management</h2>
-            <button 
-                onClick={() => setIsDirectBorrowPopupOpen(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
-            >
-                <BookUp size={18} />
-                Direct Borrow
-            </button>
             <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
                 <input
