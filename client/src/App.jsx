@@ -22,18 +22,18 @@ const App = () => {
 
   useEffect(() => {
     dispatch(getUser());
-      if (isAuthenticated) {
-          dispatch(fetchAllBooks());
-          dispatch(fetchNotifications());
-          if (user?.role === "User") {
-              dispatch(fetchUserBorrowedBooks());
-          }
-          if (user?.role === "Admin") {
-              dispatch(fetchAllUsers());
-              dispatch(fetchAllBorrowedBooks());
-              dispatch(fetchAllMetadata());
-          }
+    if (isAuthenticated) {
+      dispatch(fetchAllBooks());
+      dispatch(fetchNotifications());
+      if (user?.role === "User") {
+        dispatch(fetchUserBorrowedBooks());
       }
+      if (user?.role === "Admin") {
+        dispatch(fetchAllUsers());
+        dispatch(fetchAllBorrowedBooks());
+        dispatch(fetchAllMetadata());
+      }
+    }
   }, [isAuthenticated, user?.role, dispatch]);
 
   return (
@@ -45,7 +45,7 @@ const App = () => {
         <Route path='/password/forgot' element={<ForgotPassword />} />
         <Route path='/otp-verification/:email' element={<OTP />} />
         <Route path='/password/reset/:token' element={<ResetPassword />} />
-        <Route path='/books/:id' element={<BookDetails />} />
+        {/* <Route path='/books/:id' element={<BookDetails />} /> */}
       </Routes>
       <ToastContainer theme='dark' />
     </Router>

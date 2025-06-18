@@ -1,12 +1,11 @@
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import {
-  toggleAddBookPopup,
-} from "../store/slices/popUpSlice";
+import { toggleAddBookPopup } from "../store/slices/popUpSlice";
 import { toast } from "react-toastify";
 import {
   fetchAllBooks,
   resetBookSlice,
+  deleteBook,
 } from "../store/slices/bookSlice";
 import {
   fetchAllBorrowedBooks,
@@ -19,7 +18,6 @@ import ManageCopiesPopup from "../popups/ManageCopiesPopup";
 import EditBookPopup from "../popups/EditBookPopup";
 import BookDetailPopup from "../popups/BookDetailPopup";
 import { BookA, NotebookPen, Edit, Trash2 } from "lucide-react";
-import { deleteBook } from "../store/slices/bookSlice";
 
 const BookManagement = () => {
   const dispatch = useDispatch();
@@ -29,38 +27,39 @@ const BookManagement = () => {
   const { error: bookError, message: bookMessage } = useSelector((state) => state.book);
   const { error: borrowError, message: borrowMessage } = useSelector((state) => state.borrow);
   const [borrowBookId, setBorrowBookId] = useState("");
-    const [searchedKeyword, setSearchedKeyword] = useState("");
+  const [searchedKeyword, setSearchedKeyword] = useState("");
+  const [isEditPopupOpen, setIsEditPopupOpen] = useState(false);
+  const [selectedBook, setSelectedBook] = useState(null);
+  const [isCopiesPopupOpen, setIsCopiesPopupOpen] = useState(false);
 
-    const [isEditPopupOpen, setIsEditPopupOpen] = useState(false);
-    const [selectedBook, setSelectedBook] = useState(null);
+  useEffect(() => {
+    dispatch(fetchAllBooks());
+    dispatch(fetchAllBorrowedBooks());
+  }, [dispatch]);
 
-    const [isCopiesPopupOpen, setIsCopiesPopupOpen] = useState(false);
+  useEffect(() => {
+    if (bookMessage) {
+      toast.success(bookMessage);
+      dispatch(resetBookSlice());
+    }
+    if (bookError) {
+      toast.error(bookError);
+      dispatch(resetBookSlice());
+    }
+  }, [bookMessage, bookError, dispatch]);
 
-    const [isDetailPopupOpen, setIsDetailPopupOpen] = useState(false);
-
-    useEffect(() => {
-        if (bookMessage) {
-          toast.success(bookMessage);
-          dispatch(resetBookSlice()); // Reset ngay sau khi hiển thị
-        }
-        if (bookError) {
-          toast.error(bookError);
-          dispatch(resetBookSlice()); // Reset ngay sau khi hiển thị
-        }
-    }, [bookMessage, bookError, dispatch]);
-    
-    useEffect(() => {
-        if (borrowMessage) {
-          toast.success(borrowMessage);
-          dispatch(fetchAllBooks()); // Cần tải lại sách khi mượn/trả thành công
-          dispatch(fetchAllBorrowedBooks());
-          dispatch(resetBorrowSlice()); // Reset ngay sau khi hiển thị
-        }
-        if (borrowError) {
-          toast.error(borrowError);
-          dispatch(resetBorrowSlice()); // Reset ngay sau khi hiển thị
-        }
-      }, [borrowMessage, borrowError, dispatch]);
+  useEffect(() => {
+    if (borrowMessage) {
+      toast.success(borrowMessage);
+      dispatch(fetchAllBooks());
+      dispatch(fetchAllBorrowedBooks());
+      dispatch(resetBorrowSlice());
+    }
+    if (borrowError) {
+      toast.error(borrowError);
+      dispatch(resetBorrowSlice());
+    }
+  }, [borrowMessage, borrowError, dispatch]);
 
   const handleSearch = (e) => {
     setSearchedKeyword(e.target.value.toLowerCase());
@@ -71,25 +70,20 @@ const BookManagement = () => {
   );
 
   const handleDeleteBook = (bookId, bookTitle) => {
-    if (window.confirm(`Are you sure you want to delete the book "${bookTitle}"? This action cannot be undone.`)) {
+    if (window.confirm(`Are you sure you want to delete "${bookTitle}"?`)) {
       dispatch(deleteBook(bookId));
     }
   };
-
-  const openDetailPopup = (book) => {
-    setSelectedBook(book);
-    setIsDetailPopupOpen(true);
-};
 
   const openEditBookPopup = (book) => {
     setSelectedBook(book);
     setIsEditPopupOpen(true);
   };
-    
+
   const openManageCopiesPopup = (book) => {
-    setSelectedBook(book); 
+    setSelectedBook(book);
     setIsCopiesPopupOpen(true);
-};
+  };
 
   return (
     <>
@@ -121,56 +115,49 @@ const BookManagement = () => {
           </div>
         </header>
 
-        {/* Book Cards - Đã được cập nhật */}
+        {/* Book Cards */}
         {searchedBooks.length > 0 ? (
           <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {searchedBooks.map((book) => (
               <div
                 key={book._id}
-                className="bg-white rounded-lg shadow-md p-4 flex flex-col"
+                className="bg-white rounded-lg shadow-md p-4 flex flex-col cursor-pointer hover:shadow-lg transition"
+                onClick={() => setSelectedBook(book)}
               >
                 <img
-                  src={book.coverImage?.url || 'https://via.placeholder.com/150'} // Thêm fallback image
+                  src={book.coverImage?.url || 'https://via.placeholder.com/150'}
                   alt={book.title}
                   className="w-full h-48 object-cover rounded mb-3"
                 />
-                <h3
-                  className="text-lg font-semibold text-blue-600 hover:underline cursor-pointer"
-                  onClick={() => openDetailPopup(book._id)}
-                >
-                  {book.title}
-                </h3>
-                {/* Hiển thị thêm thông tin */}
+                <h3 className="text-lg font-semibold text-blue-600">{book.title}</h3>
                 <p className="text-sm text-gray-500 mb-1">by {book.authors.map(a => a.name).join(', ')}</p>
                 <p className="text-sm text-gray-600 mb-1">ISBN: {book.isbn}</p>
-                
-                {/* Hiển thị số lượng bản sao còn lại */}
                 <p className={`text-sm font-medium mb-2 ${book.isAvailable ? "text-green-600" : "text-red-600"}`}>
-                  {book.isAvailable 
-                    ? `${book.availableCopiesCount} available` 
-                    : "Unavailable"}
+                  {book.isAvailable ? `${book.availableCopiesCount} available` : "Unavailable"}
                 </p>
-
                 {isAuthenticated && (user?.role === "Admin" || user?.role === "Librarian") && (
-                  <div className="mt-auto flex justify-around gap-2 pt-2 border-t">
-                    <button className="text-blue-600 hover:scale-110 transition" title="View Details" onClick={() => openDetailPopup(book)}>
-                        <BookA size={20} />
+                  <div
+                    className="mt-auto flex justify-around gap-2 pt-2 border-t"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <button className="text-blue-600 hover:scale-110 transition" onClick={() => setSelectedBook(book)} title="View Details">
+                      <BookA size={20} />
                     </button>
-                    <button className="text-orange-500 hover:scale-110 transition" title="Edit Book" onClick={() => openEditBookPopup(book)}>
+                    <button className="text-orange-500 hover:scale-110 transition" onClick={() => openEditBookPopup(book)} title="Edit Book">
                       <Edit size={20} />
                     </button>
-                    <button className="text-green-600 hover:scale-110 transition" title="Manage Copies" onClick={() => openManageCopiesPopup(book)}>
-                        <NotebookPen size={20}/>
+                    <button className="text-green-600 hover:scale-110 transition" onClick={() => openManageCopiesPopup(book)} title="Manage Copies">
+                      <NotebookPen size={20} />
                     </button>
                     {user.role === "Admin" && (
-                    <button 
-                        className="text-red-600 hover:scale-110 transition" 
-                        title="Delete Book"
+                      <button
+                        className="text-red-600 hover:scale-110 transition"
                         onClick={() => handleDeleteBook(book._id, book.title)}
-                    >
-                        <Trash2 size={20}/>
-                    </button>
-                )}
+                        title="Delete Book"
+                      >
+                        <Trash2 size={20} />
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
@@ -181,11 +168,18 @@ const BookManagement = () => {
         )}
       </main>
 
+      {/* Popups */}
       {addBookPopup && <AddBookPopup />}
       {recordBookPopup && <RecordBookup bookId={borrowBookId} />}
-      {isEditPopupOpen && <EditBookPopup book={selectedBook} closePopup={() => setIsEditPopupOpen(false)} />}
-      {isCopiesPopupOpen && <ManageCopiesPopup book={selectedBook} closePopup={() => setIsCopiesPopupOpen(false)} />}
-      {isDetailPopupOpen && <BookDetailPopup book={selectedBook} closePopup={() => setIsDetailPopupOpen(false)} />}
+      {isEditPopupOpen && selectedBook && (
+        <EditBookPopup book={selectedBook} closePopup={() => setIsEditPopupOpen(false)} />
+      )}
+      {isCopiesPopupOpen && selectedBook && (
+        <ManageCopiesPopup book={selectedBook} closePopup={() => setIsCopiesPopupOpen(false)} />
+      )}
+      {selectedBook && (
+        <BookDetailPopup book={selectedBook} closePopup={() => setSelectedBook(null)} />
+      )}
     </>
   );
 };

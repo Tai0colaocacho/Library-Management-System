@@ -54,6 +54,21 @@ const borrowSlice = createSlice({
             state.error = action.payload;
             state.message = null;
         },
+        reserveCopyRequest(state) {
+            state.loading = true;
+            state.error = null;
+            state.message = null;
+        },
+        reserveCopySuccess(state, action) {
+            state.loading = false;
+            state.message = action.payload;
+        },
+        reserveCopyFailed(state, action) {
+            state.loading = false;
+            state.error = action.payload;
+            state.message = null;
+        },
+
         returnBookRequest(state) {
             state.loading = true;
             state.error = null;
@@ -93,6 +108,28 @@ export const fetchAllBorrowedBooks = () => async (dispatch) => {
         dispatch(borrowSlice.actions.fetchAllBorrowedBooksFailed(err.response.data.message))
     })
 }
+export const reserveCopy = (copyId, bookId) => async (dispatch) => {
+    dispatch(borrowSlice.actions.reserveCopyRequest());
+    try {
+        const res = await axios.post(
+            `http://localhost:4000/api/v1/borrowings/reserve`,
+            { copyId, bookId }, // ← thêm bookId vào đây
+            {
+                withCredentials: true,
+                headers: {
+                    "Content-Type": "application/json",
+                },
+            }
+        );
+        dispatch(borrowSlice.actions.reserveCopySuccess(res.data.message));
+        toast.success(res.data.message);
+    } catch (err) {
+        dispatch(borrowSlice.actions.reserveCopyFailed(err.response?.data?.message || "Reservation failed."));
+        toast.error(err.response?.data?.message || "Reservation failed.");
+    }
+};
+
+
 export const recordBorrowBook = (email, id) => async (dispatch) => {
     dispatch(borrowSlice.actions.recordBookRequest())
     await axios.post(`http://localhost:4000/api/v1/borrowings/record-borrow-book/${id}`, { email }, {

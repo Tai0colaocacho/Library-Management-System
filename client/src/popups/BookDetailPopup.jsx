@@ -1,9 +1,17 @@
 import PropTypes from 'prop-types';
+import { useDispatch, useSelector } from 'react-redux';
+import { toast } from 'react-toastify';
+import { reserveCopy } from '../store/slices/borrowSlice';
+import { useState } from 'react';
 
 const BookDetailPopup = ({ book, closePopup }) => {
+    const dispatch = useDispatch();
+    const [selectedCopyId, setSelectedCopyId] = useState(null);
+    const [selectedCopyStatus, setSelectedCopyStatus] = useState(null);
+    const [copiesState, setCopiesState] = useState(book.copies || []);
+
     if (!book) return null;
 
-    // Hàm để lấy class màu sắc dựa trên trạng thái của bản sao
     const getStatusClass = (status) => {
         switch (status) {
             case 'Available':
@@ -13,16 +21,49 @@ const BookDetailPopup = ({ book, closePopup }) => {
             case 'Reserved':
                 return 'bg-blue-100 text-blue-800';
             default:
-                return 'bg-gray-100 text-gray-800'; // Dành cho các trạng thái khác
+                return 'bg-gray-100 text-gray-800';
         }
     };
-    
-    // Hàm định dạng ngày tháng cho dễ đọc
+
     const formatDate = (dateString) => {
         if (!dateString) return 'N/A';
         const options = { year: 'numeric', month: 'long', day: 'numeric' };
         return new Date(dateString).toLocaleDateString('en-US', options);
     };
+
+    const handleCopyClick = (copy) => {
+        setSelectedCopyId(copy._id);
+        setSelectedCopyStatus(copy.status);
+        if (copy.status !== 'Available') {
+            toast.info(`This copy is currently ${copy.status}. You cannot reserve it now.`);
+        }
+    };
+
+    const handleReserve = async () => {
+        if (!selectedCopyId || selectedCopyStatus !== 'Available') return;
+
+        try {
+            const action = await dispatch(reserveCopy(selectedCopyId, book._id));
+            const result = action.payload;
+
+            if (result?.success) {
+                setCopiesState((prev) =>
+                    prev.map((copy) =>
+                        copy._id === selectedCopyId ? { ...copy, status: 'Reserved' } : copy
+                    )
+                );
+                setSelectedCopyId(null);
+                setSelectedCopyStatus(null);
+                toast.success("Đặt chỗ thành công!");
+            }
+        } catch (err) {
+        }
+    };
+
+    const reservedOrBorrowedCount = copiesState.filter(
+        copy => copy.status === 'Reserved' || copy.status === 'Borrowed'
+    ).length;
+    const hasReachedLimit = reservedOrBorrowedCount >= 5;
 
     return (
         <div className='fixed inset-0 bg-black bg-opacity-50 p-5 flex items-center justify-center z-50'>
@@ -32,53 +73,55 @@ const BookDetailPopup = ({ book, closePopup }) => {
                     <button onClick={closePopup} className="text-gray-400 hover:text-gray-600">&times;</button>
                 </div>
                 <div className='p-6 overflow-y-auto flex-grow grid grid-cols-1 md:grid-cols-3 gap-6'>
-                    {/* --- CỘT TRÁI: ẢNH BÌA VÀ THÔNG TIN CƠ BẢN --- */}
                     <div className="md:col-span-1 flex flex-col items-center text-center">
-                        <img 
-                            src={book.coverImage?.url || 'https://via.placeholder.com/150x220.png?text=No+Image'} 
-                            alt={book.title} 
+                        <img
+                            src={book.coverImage?.url || 'https://via.placeholder.com/150x220.png?text=No+Image'}
+                            alt={book.title}
                             className="w-48 h-auto object-cover border rounded-md shadow-lg mb-4"
                         />
                         <h4 className="text-xl font-bold">{book.title}</h4>
                         <p className="text-md text-gray-600">by {book.authors?.map(a => a.name).join(', ')}</p>
-                        
+
                         <div className="mt-4 text-sm text-left w-full">
-                           <div className="flex justify-between border-t pt-2">
+                            <div className="flex justify-between border-t pt-2">
                                 <span className="font-semibold text-gray-700">Category:</span>
                                 <span className="text-gray-600">{book.category?.name || 'N/A'}</span>
-                           </div>
-                           <div className="flex justify-between border-t pt-2 mt-2">
+                            </div>
+                            <div className="flex justify-between border-t pt-2 mt-2">
                                 <span className="font-semibold text-gray-700">Publisher:</span>
                                 <span className="text-gray-600">{book.publisher?.name || 'N/A'}</span>
-                           </div>
+                            </div>
                             <div className="flex justify-between border-t pt-2 mt-2">
                                 <span className="font-semibold text-gray-700">Published:</span>
                                 <span className="text-gray-600">{formatDate(book.publication_date)}</span>
-                           </div>
-                           <div className="flex justify-between border-t pt-2 mt-2">
+                            </div>
+                            <div className="flex justify-between border-t pt-2 mt-2">
                                 <span className="font-semibold text-gray-700">Pages:</span>
                                 <span className="text-gray-600">{book.page_count || 'N/A'}</span>
-                           </div>
-                           <div className="flex justify-between border-t pt-2 mt-2">
+                            </div>
+                            <div className="flex justify-between border-t pt-2 mt-2">
                                 <span className="font-semibold text-gray-700">Price:</span>
                                 <span className="text-gray-600">${book.price?.toFixed(2) || 'N/A'}</span>
-                           </div>
+                            </div>
                             <div className="flex justify-between border-t pt-2 mt-2">
                                 <span className="font-semibold text-gray-700">ISBN:</span>
                                 <span className="text-gray-600">{book.isbn}</span>
-                           </div>
+                            </div>
                         </div>
                     </div>
 
-                    {/* --- CỘT PHẢI: MÔ TẢ VÀ DANH SÁCH BẢN SAO --- */}
                     <div className="md:col-span-2">
                         <h4 className="font-semibold text-lg mb-2 border-b pb-2">Description</h4>
                         <p className="text-sm text-gray-700 max-h-40 overflow-y-auto pr-2">{book.description}</p>
-                        
-                        <h4 className="font-semibold text-lg mt-6 mb-2 border-b pb-2">Copies ({book.copies?.length || 0})</h4>
+
+                        <h4 className="font-semibold text-lg mt-6 mb-2 border-b pb-2">Copies ({copiesState.length})</h4>
                         <div className="space-y-3 max-h-64 overflow-y-auto pr-2">
-                            {book.copies?.map(copy => (
-                                <div key={copy._id} className="p-3 border rounded-md flex items-center justify-between gap-4 bg-gray-50">
+                            {copiesState.map(copy => (
+                                <div
+                                    key={copy._id}
+                                    onClick={() => handleCopyClick(copy)}
+                                    className={`p-3 border rounded-md flex items-center justify-between gap-4 bg-gray-50 cursor-pointer ${selectedCopyId === copy._id ? 'ring-2 ring-blue-400' : ''}`}
+                                >
                                     <div>
                                         <p className="font-medium">Location: <span className="text-gray-600 font-normal">{copy.location}</span></p>
                                         <p className="text-xs text-gray-400">Copy ID: {copy._id}</p>
@@ -88,11 +131,25 @@ const BookDetailPopup = ({ book, closePopup }) => {
                                     </span>
                                 </div>
                             ))}
-                             {(!book.copies || book.copies.length === 0) && <p className="text-gray-500 text-center mt-4">No copies found for this book.</p>}
+                            {copiesState.length === 0 && (
+                                <p className="text-gray-500 text-center mt-4">No copies found for this book.</p>
+                            )}
                         </div>
                     </div>
                 </div>
-                <div className="p-4 bg-gray-50 text-right border-t">
+                <div className="p-4 bg-gray-50 flex flex-col md:flex-row justify-end gap-3 border-t">
+                    {hasReachedLimit && (
+                        <p className="text-red-500 text-sm mt-1">Bạn đã đạt giới hạn 5 bản sao được đặt/mượn.</p>
+                    )}
+                    {selectedCopyId && selectedCopyStatus === 'Available' && !hasReachedLimit && (
+                        <button
+                            type='button'
+                            onClick={handleReserve}
+                            className='px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700'
+                        >
+                            Đặt chỗ
+                        </button>
+                    )}
                     <button type='button' onClick={closePopup} className='px-4 py-2 bg-gray-300 rounded-md hover:bg-gray-400'>Close</button>
                 </div>
             </div>
