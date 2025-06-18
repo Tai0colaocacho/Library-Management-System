@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import usersIcon from "../assets/people-black.png";
 import bookIcon from "../assets/book-square.png";
-import reservedIcon from "../assets/save-add.png"; // Assuming you have this icon
-import overdueIcon from "../assets/danger.png"; // Assuming you have this icon
+import reservedIcon from "../assets/save-add.png"; 
+import overdueIcon from "../assets/danger.png"; 
 import { Pie } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -33,9 +33,9 @@ ChartJS.register(
 
 const AdminDashboard = () => {
   const { user } = useSelector((state) => state.auth);
-  const { users } = useSelector((state) => state.user);
-  const { books } = useSelector((state) => state.book);
-  const { allBorrowedBooks } = useSelector((state) => state.borrow);
+  const { users = [] } = useSelector((state) => state.user);
+  const { books = [] } = useSelector((state) => state.book);
+  const { allBorrowedBooks = [] } = useSelector((state) => state.borrow);
 
   // State to store the calculated statistics
   const [stats, setStats] = useState({

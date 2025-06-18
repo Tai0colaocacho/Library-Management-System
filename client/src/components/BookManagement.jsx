@@ -34,7 +34,7 @@ const BookManagement = () => {
 
   useEffect(() => {
     dispatch(fetchAllBooks());
-    dispatch(fetchAllBorrowedBooks());
+    // dispatch(fetchAllBorrowedBooks());
   }, [dispatch]);
 
   useEffect(() => {

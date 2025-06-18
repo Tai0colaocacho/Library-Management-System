@@ -94,16 +94,16 @@ const borrowSlice = createSlice({
 
 export const fetchUserBorrowedBooks = () => async (dispatch) => {
     dispatch(borrowSlice.actions.fetchUserBorrowedBooksRequest())
-    await axios.get("http://localhost:4000/api/v1/borrowings/my-borrowed-books", { withCredentials: true }).then((res) => {
-        dispatch(borrowSlice.actions.fetchUserBorrowedBooksSuccess(res.data.borrowedBooks))
+    await axios.get("http://localhost:4000/api/v1/borrowings/my-history", { withCredentials: true }).then((res) => {
+        dispatch(borrowSlice.actions.fetchUserBorrowedBooksSuccess(res.data.history))
     }).catch((err) => {
         dispatch(borrowSlice.actions.fetchUserBorrowedBooksFailed(err.response.data.message))
     })
 }
 export const fetchAllBorrowedBooks = () => async (dispatch) => {
     dispatch(borrowSlice.actions.fetchAllBorrowedBooksRequest())
-    await axios.get("http://localhost:4000/api/v1/borrowings/borrowed-books-by-users", { withCredentials: true }).then((res) => {
-        dispatch(borrowSlice.actions.fetchAllBorrowedBooksSuccess(res.data.borrowedBooks))
+    await axios.get("http://localhost:4000/api/v1/borrowings/admin/all", { withCredentials: true }).then((res) => {
+        dispatch(borrowSlice.actions.fetchAllBorrowedBooksSuccess(res.data.borrowings))
     }).catch((err) => {
         dispatch(borrowSlice.actions.fetchAllBorrowedBooksFailed(err.response.data.message))
     })
@@ -113,7 +113,7 @@ export const reserveCopy = (copyId, bookId) => async (dispatch) => {
     try {
         const res = await axios.post(
             `http://localhost:4000/api/v1/borrowings/reserve`,
-            { copyId, bookId }, // ← thêm bookId vào đây
+            { copyId, bookId },
             {
                 withCredentials: true,
                 headers: {
@@ -199,6 +199,18 @@ export const reportLostOrDamaged = (borrowingId, finalStatus) => async (dispatch
         dispatch(fetchAllBorrowedBooks());
     } catch (err) {
         toast.error(err.response?.data?.message || "Failed to report status.");
+    }
+};
+
+export const cancelReservation = (borrowingId) => async (dispatch) => {
+    try {
+        const {data} = await axios.put(`http://localhost:4000/api/v1/borrowings/reservations/${borrowingId}/cancel`, {}, { withCredentials: true });
+        dispatch(fetchUserBorrowedBooks());
+        return { success: true, message: data.message };
+    } catch (err) {
+        const errorMessage = err.response?.data?.message || "Failed to cancel reservation.";
+        toast.error(errorMessage);
+        return { success: false, message: errorMessage };
     }
 };
 

@@ -8,9 +8,9 @@ import AdminDashboard from "../components/AdminDashboard";
 import BookManagement from "../components/BookManagement";
 import Catalog from "../components/Catalog";
 import Users from "../components/Users";
-import MyBorrowedBooks from "../components/MyBorrowedBooks"
 import Settings from "../components/Settings";
 import ProfilePage from "../components/ProfilePage";
+import MyBooks from "../components/MyBooks";
 const Home = () => {
   const [isSideBarOpen, setIsSideBarOpen] = useState(false);
   const [selectedComponent, setSelectedComponent] = useState("");
@@ -62,8 +62,8 @@ const Home = () => {
                 return <Settings />;
               }
               break;
-            case "My Borrowed Books":
-              return <MyBorrowedBooks />;
+              case "My Books":
+                return <MyBooks />;
             default:
               return user?.role === "Member" ? (
                 <UserDashboard />

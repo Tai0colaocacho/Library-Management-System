@@ -232,7 +232,7 @@ export const renewBook = catchAsyncErrors(async (req, res, next) => {
 export const getMyBorrowingHistory = catchAsyncErrors(async (req, res, next) => {
     const memberId = req.user._id;
     const history = await Borrowing.find({ "user.id": memberId })
-        .populate('book', 'title isbn authors')
+        .populate('book', 'title isbn authors coverImage')
         .sort({ createdAt: -1 });
 
     res.status(200).json({
@@ -286,7 +286,7 @@ export const getAllBorrowings = catchAsyncErrors(async (req, res, next) => {
 
     const count = await Borrowing.countDocuments(query);
     const borrowings = await Borrowing.find(query)
-        .populate('book', 'title isbn')
+        .populate('book', 'title isbn coverImage')
         .populate('user.id', 'name email') 
         .sort(sortBy)
         .limit(limit * 1)

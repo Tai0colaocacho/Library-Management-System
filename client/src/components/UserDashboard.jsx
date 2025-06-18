@@ -1,4 +1,3 @@
-import React, { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import Header from "../layout/Header";
 import logo from "../assets/black-logo.png";
@@ -8,27 +7,26 @@ const UserDashboard = () => {
   const { userBorrowedBooks } = useSelector((state) => state.borrow);
   const { books } = useSelector((state) => state.book);
 
-  const [totalBorrowedBooks, setTotalBorrowedBooks] = useState(0);
-  const [totalReturnedBooks, setTotalReturnedBooks] = useState(0);
+  const unreturnedBooks = userBorrowedBooks?.filter((b) => b.status === 'Borrowed' || b.status === 'Overdue') || [];
+  const returnedBooks = userBorrowedBooks?.filter((b) => b.status === 'Returned') || [];
 
-  useEffect(() => {
-    const unreturned = userBorrowedBooks.filter((book) => !book.returned);
-    const returned = userBorrowedBooks.filter((book) => book.returned);
-    setTotalBorrowedBooks(unreturned.length);
-    setTotalReturnedBooks(returned.length);
-  }, [userBorrowedBooks]);
+  const totalBorrowedBooks = unreturnedBooks.length;
+  const totalReturnedBooks = returnedBooks.length;
 
-  const mostBorrowedBook = [...books].sort((a, b) => (b.borrowCount || 0) - (a.borrowCount || 0))[0];
-  const topBooks = [...books]
+  const mostBorrowedBook = [...(books || [])].sort((a, b) => (b.borrowCount || 0) - (a.borrowCount || 0))[0];
+  
+  const topBooks = [...(books || [])]
     .filter((b) => b.borrowCount > 0)
     .sort((a, b) => (b.borrowCount || 0) - (a.borrowCount || 0))
     .slice(0, 4);
 
-  const currentlyBorrowed = userBorrowedBooks.filter((b) => !b.returned);
+  const currentlyBorrowed = unreturnedBooks;
 
-  // Suggested books (mock: lấy cùng thể loại với sách đang mượn)
-  const suggestedBooks = books
-    .filter((b) => currentlyBorrowed.some((br) => br.category === b.category) && !currentlyBorrowed.some((br) => br._id === b._id))
+  const suggestedBooks = (books || [])
+    .filter((b) => 
+        currentlyBorrowed.some((br) => br.book?.category === b.category?._id) && 
+        !currentlyBorrowed.some((br) => br.book?._id === b._id)
+    )
     .slice(0, 3);
 
   return (
