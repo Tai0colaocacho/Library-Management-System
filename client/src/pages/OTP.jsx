@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import logo from "../assets/black-logo.png";
 import logo_with_title from "../assets/logo-with-title.png";
-import { NavLink, useParams, Link } from "react-router-dom";
+import { NavLink, useParams, Link, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { otpVerification, resetAuthSlice } from "../store/slices/authSlice";
 import { toast } from "react-toastify";
@@ -9,6 +9,7 @@ const OTP = () => {
   const {email} = useParams();
   const [otp, setOtp] = useState("");
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const {loading, error, message, user, isAuthenticated} = useSelector(state => state.auth);
 
   const handleOtpVerification = (e) => {
@@ -27,7 +28,7 @@ const OTP = () => {
   }, [dispatch, isAuthenticated, error, loading])
 
   if(isAuthenticated){
-    return <NavLink to={"/"}/>
+    navigate("/");
   }
   return (<>
     <div className="flex flex-col justify-center md:flex-row h-screen">

@@ -145,7 +145,7 @@ export const resetAuthSlice = () => (dispatch) => {
 }
 
 export const register = (data) => async (dispatch) => {
-    console.log("Data gui len be:", data);
+    // console.log("Data gui len be:", data);
     dispatch(authSlice.actions.registerRequest());
     await axios.post("http://localhost:4000/api/v1/auth/register", data, {
         withCredentials: true,
