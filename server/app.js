@@ -12,6 +12,9 @@ import borrowingRouter from './routes/borrowRouter.js';
 import userRouter from './routes/userRouter.js';
 import settingsRouter from './routes/settingsRouter.js'; 
 import notificationRouter from './routes/notificationRouter.js'; 
+import categoryRouter from "./routes/categoryRouter.js";
+import authorRouter from "./routes/authorRouter.js";
+import publisherRouter from "./routes/publisherRouter.js";
 
 import { handleScheduledTasks } from './services/scheduledTasks.js'; 
 import { removeUnverifiedAccounts } from './services/removeUnverifiedAccounts.js';
@@ -41,6 +44,9 @@ app.use('/api/v1/borrowings', borrowingRouter);
 app.use('/api/v1/users', userRouter);   
 app.use('/api/v1/settings', settingsRouter); 
 app.use('/api/v1/notifications', notificationRouter); 
+app.use('/api/v1/categories', categoryRouter);
+app.use('/api/v1/authors', authorRouter);
+app.use('/api/v1/publishers', publisherRouter);
 
 handleScheduledTasks(); 
 removeUnverifiedAccounts(); 

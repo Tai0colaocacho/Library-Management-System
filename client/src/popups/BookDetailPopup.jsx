@@ -2,13 +2,33 @@ import PropTypes from 'prop-types';
 import { useDispatch, useSelector } from 'react-redux';
 import { toast } from 'react-toastify';
 import { reserveCopy } from '../store/slices/borrowSlice';
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 
 const BookDetailPopup = ({ book, closePopup }) => {
     const dispatch = useDispatch();
     const [selectedCopyId, setSelectedCopyId] = useState(null);
     const [selectedCopyStatus, setSelectedCopyStatus] = useState(null);
     const [copiesState, setCopiesState] = useState(book.copies || []);
+    const { user } = useSelector(state => state.auth);
+    const { userBorrowedBooks } = useSelector(state => state.borrow);
+    const { settings } = useSelector(state => state.settings);
+
+    const hasReachedLimit = useMemo(() => {
+        if (!userBorrowedBooks || !settings) return false;
+
+        const currentlyHoldingCount = userBorrowedBooks.filter(
+            b => b.status === 'Reserved' || b.status === 'Borrowed' || b.status === 'Overdue'
+        ).length;
+
+        return currentlyHoldingCount >= settings.max_books_per_user;
+
+    }, [userBorrowedBooks, settings]);
+
+    useEffect(() => {
+        if (book?.copies) {
+            setCopiesState(book.copies);
+        }
+    }, [book]);
 
     if (!book) return null;
 
@@ -32,6 +52,8 @@ const BookDetailPopup = ({ book, closePopup }) => {
     };
 
     const handleCopyClick = (copy) => {
+        if (user?.role !== 'Member') return;
+
         setSelectedCopyId(copy._id);
         setSelectedCopyStatus(copy.status);
         if (copy.status !== 'Available') {
@@ -54,16 +76,12 @@ const BookDetailPopup = ({ book, closePopup }) => {
                 );
                 setSelectedCopyId(null);
                 setSelectedCopyStatus(null);
-                toast.success("Đặt chỗ thành công!");
+                toast.success("Reservation successful!");
             }
         } catch (err) {
+            toast.error(err.response?.data?.message || "Reservation failed.");
         }
     };
-
-    const reservedOrBorrowedCount = copiesState.filter(
-        copy => copy.status === 'Reserved' || copy.status === 'Borrowed'
-    ).length;
-    const hasReachedLimit = reservedOrBorrowedCount >= 5;
 
     return (
         <div className='fixed inset-0 bg-black bg-opacity-50 p-5 flex items-center justify-center z-50'>
@@ -138,17 +156,21 @@ const BookDetailPopup = ({ book, closePopup }) => {
                     </div>
                 </div>
                 <div className="p-4 bg-gray-50 flex flex-col md:flex-row justify-end gap-3 border-t">
-                    {hasReachedLimit && (
-                        <p className="text-red-500 text-sm mt-1">Bạn đã đạt giới hạn 5 bản sao được đặt/mượn.</p>
-                    )}
-                    {selectedCopyId && selectedCopyStatus === 'Available' && !hasReachedLimit && (
-                        <button
-                            type='button'
-                            onClick={handleReserve}
-                            className='px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700'
-                        >
-                            Đặt chỗ
-                        </button>
+                    {user?.role === 'Member' && (
+                        <>
+                            {hasReachedLimit && (
+                                <p className="text-red-500 text-sm mt-1">Bạn đã đạt giới hạn 5 bản sao được đặt/mượn.</p>
+                            )}
+                            {selectedCopyId && selectedCopyStatus === 'Available' && !hasReachedLimit && (
+                                <button
+                                    type='button'
+                                    onClick={handleReserve}
+                                    className='px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700'
+                                >
+                                    Đặt chỗ
+                                </button>
+                            )}
+                        </>
                     )}
                     <button type='button' onClick={closePopup} className='px-4 py-2 bg-gray-300 rounded-md hover:bg-gray-400'>Close</button>
                 </div>

@@ -14,7 +14,8 @@ import { toast } from "react-toastify";
 import { toggleSettingPopup } from "../store/slices/popUpSlice";
 import SettingPopup from "../popups/SettingPopup"; 
 import { IoSettingsSharp } from "react-icons/io5";
-import { User } from "lucide-react";
+import { User, Database } from "lucide-react";
+
 
 const SideBar = ({ isSideBarOpen, setIsSideBarOpen, setSelectedComponent }) => {
   const dispatch = useDispatch();
@@ -77,6 +78,10 @@ const SideBar = ({ isSideBarOpen, setIsSideBarOpen, setSelectedComponent }) => {
                 </button>
                  <button onClick={() => setSelectedComponent("Users")} className="w-full py-2 font-medium bg-transparent rounded-md hover:cursor-pointer flex items-center space-x-2">
                   <img src={usersIcon} alt="users" /> <span>Users</span>
+                </button>
+                <button onClick={() => setSelectedComponent("Metadata")} className="w-full py-2 font-medium bg-transparent rounded-md hover:cursor-pointer flex items-center space-x-2">
+                  <Database size={20} />
+                  <span>Metadata</span>
                 </button>
               </>
             )}

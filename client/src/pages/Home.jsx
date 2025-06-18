@@ -11,6 +11,7 @@ import Users from "../components/Users";
 import Settings from "../components/Settings";
 import ProfilePage from "../components/ProfilePage";
 import MyBooks from "../components/MyBooks";
+import MetadataManagement from "../components/MetadataManagement";
 const Home = () => {
   const [isSideBarOpen, setIsSideBarOpen] = useState(false);
   const [selectedComponent, setSelectedComponent] = useState("");
@@ -57,6 +58,11 @@ const Home = () => {
                 return <Users />;
               }
                   break;
+                  case "Metadata":
+              if (user.role === "Admin" || user.role === "Librarian") {
+                return <MetadataManagement />;
+              }
+              break;
             case "Settings":
               if (user.role === "Admin") {
                 return <Settings />;

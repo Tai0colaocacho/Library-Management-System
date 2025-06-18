@@ -1,169 +1,99 @@
+import React, { useMemo } from "react";
 import { useSelector } from "react-redux";
 import Header from "../layout/Header";
-import logo from "../assets/black-logo.png";
-import logo_with_title from "../assets/logo-with-title-black.png";
+import { BookCheck, Clock, TrendingUp, Trophy } from "lucide-react";
 
 const UserDashboard = () => {
-  const { userBorrowedBooks } = useSelector((state) => state.borrow);
-  const { books } = useSelector((state) => state.book);
+  const { user } = useSelector((state) => state.auth);
+  const { userBorrowedBooks = [] } = useSelector((state) => state.borrow);
+  const { books = [] } = useSelector((state) => state.book);
 
-  const unreturnedBooks = userBorrowedBooks?.filter((b) => b.status === 'Borrowed' || b.status === 'Overdue') || [];
-  const returnedBooks = userBorrowedBooks?.filter((b) => b.status === 'Returned') || [];
+  const { unreturnedBooks, returnedBooks } = useMemo(() => {
+    const unreturned = userBorrowedBooks.filter((b) => b.status === 'Borrowed' || b.status === 'Overdue');
+    const returned = userBorrowedBooks.filter((b) => b.status === 'Returned');
+    return { unreturnedBooks: unreturned, returnedBooks: returned };
+  }, [userBorrowedBooks]);
 
-  const totalBorrowedBooks = unreturnedBooks.length;
-  const totalReturnedBooks = returnedBooks.length;
-
-  const mostBorrowedBook = [...(books || [])].sort((a, b) => (b.borrowCount || 0) - (a.borrowCount || 0))[0];
+  const mostPopularBook = useMemo(() => {
+    return [...books].sort((a, b) => (b.borrowCount || 0) - (a.borrowCount || 0))[0];
+  }, [books]);
   
-  const topBooks = [...(books || [])]
-    .filter((b) => b.borrowCount > 0)
-    .sort((a, b) => (b.borrowCount || 0) - (a.borrowCount || 0))
-    .slice(0, 4);
-
-  const currentlyBorrowed = unreturnedBooks;
-
-  const suggestedBooks = (books || [])
-    .filter((b) => 
-        currentlyBorrowed.some((br) => br.book?.category === b.category?._id) && 
-        !currentlyBorrowed.some((br) => br.book?._id === b._id)
-    )
-    .slice(0, 3);
+  const formatDate = (dateString) => new Date(dateString).toLocaleDateString('vi-VN');
 
   return (
     <main className="relative flex-1 p-6 pt-28 bg-gray-50 min-h-screen">
       <Header />
-      <div className="grid xl:grid-cols-3 gap-6">
-        {/* LEFT COLUMN */}
-        <div className="xl:col-span-2 flex flex-col gap-6">
-          {/* STAT CARDS */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="bg-white rounded-xl p-4 shadow flex items-center gap-4">
-              <div className="bg-gray-800 text-white w-12 h-12 flex items-center justify-center rounded-full text-xl">📚</div>
+      <div className="mb-6">
+        <h2 className="text-3xl font-bold text-gray-800">Welcome back, {user?.name}!</h2>
+        <p className="text-gray-500">Here's your reading summary and what's popular in the library.</p>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 flex flex-col gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div className="bg-white p-5 rounded-lg shadow-md flex items-start gap-4">
+              <div className="bg-blue-500 text-white w-12 h-12 flex items-center justify-center rounded-lg">
+                <Clock size={24}/>
+              </div>
               <div>
-                <p className="text-sm text-gray-600">Borrowed Books</p>
-                <h3 className="text-xl font-bold">{totalBorrowedBooks}</h3>
+                <p className="text-sm text-gray-600">Currently Borrowing</p>
+                <h3 className="text-2xl font-bold">{unreturnedBooks.length}</h3>
               </div>
             </div>
-            <div className="bg-white rounded-xl p-4 shadow flex items-center gap-4">
-              <div className="bg-gray-600 text-white w-12 h-12 flex items-center justify-center rounded-full text-xl">✅</div>
+            <div className="bg-white p-5 rounded-lg shadow-md flex items-start gap-4">
+              <div className="bg-green-500 text-white w-12 h-12 flex items-center justify-center rounded-lg">
+                <BookCheck size={24}/>
+              </div>
               <div>
-                <p className="text-sm text-gray-600">Returned Books</p>
-                <h3 className="text-xl font-bold">{totalReturnedBooks}</h3>
+                <p className="text-sm text-gray-600">Books Returned</p>
+                <h3 className="text-2xl font-bold">{returnedBooks.length}</h3>
               </div>
             </div>
           </div>
 
-          {/* MOST BORROWED */}
-          {mostBorrowedBook && (
-            <div className="bg-white p-5 rounded-xl shadow">
-              <h3 className="text-xl font-semibold mb-4">🔥 Most Borrowed Book</h3>
-              <div className="flex items-center gap-4">
-                <img
-                  src={mostBorrowedBook.coverImage?.url}
-                  alt={mostBorrowedBook.title}
-                  className="w-16 h-24 object-cover rounded"
-                />
-                <div>
-                  <p className="text-lg font-medium">{mostBorrowedBook.title}</p>
-                  <p className="text-sm text-gray-600">Author: {mostBorrowedBook.author}</p>
-                  <p className="text-sm text-gray-500">Borrowed: {mostBorrowedBook.borrowCount || 0} times</p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* TOP BORROWED */}
-          {topBooks.length > 0 && (
-            <div className="bg-white p-5 rounded-xl shadow">
-              <h3 className="text-xl font-semibold mb-4">🏆 Top Borrowed Books</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-2 gap-5">
-                {topBooks.map((book) => (
-                  <div key={book._id} className="bg-gray-50 rounded-xl p-4 shadow hover:shadow-md transition flex gap-4">
-                    <img src={book.coverImage?.url} alt={book.title} className="w-20 h-28 object-cover rounded" />
-                    <div className="flex flex-col justify-between">
-                      <div>
-                        <p className="text-lg font-semibold">{book.title}</p>
-                        <p className="text-sm text-gray-600">Author: {book.author}</p>
-                      </div>
-                      <p className="text-sm text-gray-500 mt-1">Borrowed: {book.borrowCount} times</p>
+          <div className="bg-white p-6 rounded-lg shadow-md">
+            <h3 className="text-xl font-semibold mb-4 text-gray-700">Your Currently Borrowed Books</h3>
+            {unreturnedBooks.length > 0 ? (
+              <div className="space-y-4">
+                {unreturnedBooks.map((item) => (
+                  <div key={item._id} className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
+                    <img src={item.book.coverImage?.url} alt={item.book.title} className="w-12 h-16 object-cover rounded shadow-sm" />
+                    <div className="flex-grow">
+                      <p className="font-semibold text-gray-800">{item.book.title}</p>
+                      <p className={`text-sm ${item.status === 'Overdue' ? 'text-red-600 font-bold' : 'text-gray-500'}`}>
+                        Due: {formatDate(item.due_date)}
+                      </p>
                     </div>
+                    <span className={`px-3 py-1 text-xs font-semibold rounded-full ${item.status === 'Overdue' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'}`}>
+                      {item.status}
+                    </span>
                   </div>
                 ))}
               </div>
-            </div>
-          )}
-
-          {/* CURRENTLY BORROWED */}
-          {currentlyBorrowed.length > 0 && (
-            <div className="bg-white p-5 rounded-xl shadow">
-              <h3 className="text-xl font-semibold mb-4">📚 Your Currently Borrowed Books</h3>
-              <table className="w-full text-sm text-left text-gray-700">
-                <thead>
-                  <tr className="border-b">
-                    <th className="py-2">Cover</th>
-                    <th className="py-2">Title</th>
-                    <th className="py-2">Due Date</th>
-                    <th className="py-2">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {currentlyBorrowed.map((book) => (
-                    <tr key={book._id} className="border-t">
-                      <td className="py-2">
-                        <img src={book.coverImage?.url} className="h-12 w-8 object-cover rounded" />
-                      </td>
-                      <td className="py-2">{book.title}</td>
-                      <td className="py-2">{book.dueDate || "N/A"}</td>
-                      <td className="py-2 text-yellow-600">⏳ Borrowing</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {/* SUGGESTED BOOKS */}
-          {suggestedBooks.length > 0 && (
-            <div className="bg-white p-5 rounded-xl shadow">
-              <h3 className="text-xl font-semibold mb-4">💡 Suggested Books For You</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {suggestedBooks.map((book) => (
-                  <div key={book._id} className="bg-gray-100 rounded-lg p-4 shadow-sm hover:shadow-md transition">
-                    <img src={book.coverImage?.url} className="h-40 w-full object-cover rounded mb-3" />
-                    <p className="font-medium">{book.title}</p>
-                    <p className="text-sm text-gray-600">{book.author}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* QUOTE */}
-          <div className="bg-white p-7 text-lg sm:text-xl xl:text-2xl font-semibold rounded-2xl shadow relative">
-            <h4>
-              Embarking on the journey of reading fosters personal growth, nurturing a path towards excellence and the refinement of characters.
-            </h4>
-            <p className="text-gray-700 text-sm sm:text-lg absolute right-6 bottom-3">~ BookWorm Team</p>
-          </div>
-
-          <div className="flex justify-center mt-6">
-            <img src={logo_with_title} className="w-auto h-12 sm:h-16" />
+            ) : (
+              <p className="text-center text-gray-500 py-4">You have no borrowed books currently.</p>
+            )}
           </div>
         </div>
 
-        {/* RIGHT SIDEBAR (LOGO / LEGEND) */}
-        <div className="flex flex-col items-center gap-8 mt-4 xl:mt-0">
-          <div className="bg-white p-6 rounded-xl shadow flex items-center gap-5 w-full max-w-sm">
-            <img src={logo} alt="logo" className="h-12 w-auto" />
-            <span className="w-[2px] bg-gray-400 h-12"></span>
-            <div className="text-gray-700">
-              <p className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full bg-gray-800"></span> Borrowed
-              </p>
-              <p className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full bg-gray-600"></span> Returned
-              </p>
-            </div>
+        <div className="flex flex-col gap-6">
+          <div className="bg-white p-6 rounded-lg shadow-md">
+             <h3 className="text-xl font-semibold mb-4 text-gray-700 flex items-center gap-2"><Trophy size={22} className="text-yellow-500"/> Most Popular</h3>
+             {mostPopularBook ? (
+                <div className="flex gap-4">
+                    <img src={mostPopularBook.coverImage?.url} alt={mostPopularBook.title} className="w-20 h-28 object-cover rounded-md shadow-lg" />
+                    <div>
+                        <p className="font-bold text-gray-800">{mostPopularBook.title}</p>
+                        <p className="text-sm text-gray-500 mb-2">by {mostPopularBook.authors.map(a => a.name).join(', ')}</p>
+                        <p className="text-xs text-gray-500 flex items-center gap-1"><TrendingUp size={14}/> Borrowed {mostPopularBook.borrowCount || 0} times</p>
+                    </div>
+                </div>
+             ) : <p>No data</p>}
+          </div>
+
+          <div className="bg-gradient-to-br from-gray-800 to-gray-900 text-white p-8 rounded-lg shadow-xl text-center">
+            <h4 className="text-2xl font-bold mb-2">"A reader lives a thousand lives before he dies."</h4>
+            <p className="text-gray-400">~ George R.R. Martin</p>
           </div>
         </div>
       </div>

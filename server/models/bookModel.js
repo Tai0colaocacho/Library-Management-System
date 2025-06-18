@@ -56,6 +56,10 @@ const bookSchema = new mongoose.Schema({
         public_id: { type: String },
         url: { type: String }
     },
+    borrowCount: {
+        type: Number,
+        default: 0
+    },
     copies: [copySchema] 
 },
 {

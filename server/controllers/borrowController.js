@@ -127,6 +127,8 @@ export const confirmPickup = catchAsyncErrors(async (req, res, next) => {
     reservation.due_date = due_date;
     await reservation.save();
 
+    await Book.findByIdAndUpdate(reservation.book, { $inc: { borrowCount: 1 } });
+
     const book = await Book.findById(reservation.book);
     if (!book) {
         return next(new ErrorHandler("Associated book not found. Data inconsistency.", 500));

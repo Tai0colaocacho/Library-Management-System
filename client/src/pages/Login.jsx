@@ -23,21 +23,19 @@ const Login = () => {
   }
 
   useEffect(() => {
-    // if(message){
-    //   toast.success(message);
-    //   dispatch(resetAuthSlice());
-    // }
     if (error) {
       toast.error(error);
       dispatch(resetAuthSlice());
     }
-  }, [dispatch, isAuthenticated, error, loading])
-  if (isAuthenticated) {
-    navigate("/");
-  }
+
+    if (isAuthenticated) {
+      toast.success("Login successful!");
+      navigate("/");
+    }
+  }, [isAuthenticated, error, dispatch, navigate]);
+    
   return (<>
     <div className="flex flex-col justify-center md:flex-row h-screen">
-      {/*LEFT SIDE*/}
       <div className="w-full md:w-1/2 flex items-center justify-center bg-white p-8 relative">
         <div className="max-w-sm w-full">
           <div className="flex justify-center mb-12">
@@ -62,7 +60,6 @@ const Login = () => {
           </form>
         </div>
       </div>
-      {/*RIGHT SIDE*/}
       <div className="hidden w-full md:w-1/2 bg-black text-white md:flex flex-col items-center justify-center p-8 rounded-tl-[80px] rounded-bl-[80px]">
         <div className="text-center h-[400px]">
           <div className="flex justify-center mb-12">

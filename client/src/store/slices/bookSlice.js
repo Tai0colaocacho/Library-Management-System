@@ -60,13 +60,17 @@ const bookSlice = createSlice({
     },
 })
 
-export const fetchAllBooks = () => async (dispatch) => {
+export const fetchAllBooks = (params = {}) => async (dispatch) => {
     dispatch(bookSlice.actions.fetchBookRequest());
-    await axios.get("http://localhost:4000/api/v1/books/all", { withCredentials: true }).then((res) => {
-        dispatch(bookSlice.actions.fetchBookSuccess(res.data.books))
-    }).catch((err) => {
-        dispatch(bookSlice.actions.fetchBookFailed(err.response.data.message))
-    })
+    try {
+        const { data } = await axios.get("http://localhost:4000/api/v1/books/all", {
+            withCredentials: true,
+            params: params
+        });
+        dispatch(bookSlice.actions.fetchBookSuccess(data.books));
+    } catch (err) {
+        dispatch(bookSlice.actions.fetchBookFailed(err.response.data.message));
+    }
 };
 
 export const addBook = (data) => async (dispatch) => {
