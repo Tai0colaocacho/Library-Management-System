@@ -103,7 +103,7 @@ export const createStaffOrMember = catchAsyncErrors(async (req, res, next) => {
 
 export const updateUserAccountByAdmin = catchAsyncErrors(async (req, res, next) => {
     const { userId } = req.params;
-    const { name, email, role, is_active, permissions, nationalId, phoneNumber, address, dateOfBirth, gender } = req.body;
+    const { name, email, role, is_active, nationalId, phoneNumber, address, dateOfBirth, gender } = req.body;
 
     const userToUpdate = await User.findById(userId);
     if (!userToUpdate) {
@@ -135,10 +135,6 @@ export const updateUserAccountByAdmin = catchAsyncErrors(async (req, res, next) 
     if (is_active !== undefined) {
         userToUpdate.is_active = is_active;
     }
-    if (permissions && Array.isArray(permissions)) { 
-        userToUpdate.permissions = permissions;
-    }
-
     
     if (req.files && req.files.avatar) {
         const { avatar } = req.files;

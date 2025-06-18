@@ -50,28 +50,9 @@ const userSchema = new mongoose.Schema({
         default: true, 
     },
     accountVerified: { type: Boolean, default: false },
-    borrowedBooks: [ 
-        {
-            borrowingId: {
-                type: mongoose.Schema.Types.ObjectId,
-                ref: "Borrowing"
-            },
-            bookTitle: String, 
-            borrowedDate: Date, 
-            dueDate: Date, 
-            returned: { 
-                type: Boolean, 
-                default: false,
-            },
-        },
-    ],
     avatar: {
         public_id: String,
         url: String,
-    },
-    permissions: { 
-        type: [String],
-        default: [],
     },
     verificationCode: Number,
     verificationCodeExpire: Date,
