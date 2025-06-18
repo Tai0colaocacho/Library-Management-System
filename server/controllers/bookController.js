@@ -1,17 +1,14 @@
 import { catchAsyncErrors } from "../middlewares/catchAsyncErrors.js";
 import ErrorHandler from "../middlewares/errorMiddlewares.js";
 import { Book } from "../models/bookModel.js";
-import { Author } from "../models/authorModel.js"; 
-import { Category } from "../models/categoryModel.js"; 
-import { Publisher } from "../models/publisherModel.js";
 import mongoose from "mongoose";
 import cloudinary from "cloudinary";
 
 export const addBook = catchAsyncErrors(async (req, res, next) => {
     let {
-        title, isbn, authorNames, categoryName, publisherName, 
+        title, isbn, authors, categoryId, publisherId,
         description, publication_date, page_count, price,
-        initialCopies 
+        initialCopies
     } = req.body;
 
     if (initialCopies && typeof initialCopies === 'string') {
@@ -22,46 +19,13 @@ export const addBook = catchAsyncErrors(async (req, res, next) => {
         }
     }
 
-    if (!title || !isbn || !authorNames || !categoryName || !publisherName || !description || !price || !initialCopies || initialCopies.length === 0) {
+    if (!title || !isbn || !authors || authors.length === 0 || !categoryId || !publisherId || !description || !price || !initialCopies || initialCopies.length === 0) {
         return next(new ErrorHandler("Please fill all required fields and provide initial copy information.", 400));
     }
 
     const isbnExists = await Book.findOne({ isbn });
     if (isbnExists) {
         return next(new ErrorHandler(`Book with ISBN ${isbn} already exists.`, 400));
-    }
-
-    const authorIds = [];
-    if (authorNames && Array.isArray(authorNames)) {
-        for (const name of authorNames) {
-            let author = await Author.findOne({ name: name.trim() });
-            if (!author) {
-                author = await Author.create({ name: name.trim() });
-            }
-            authorIds.push(author._id);
-        }
-    } else if (authorNames) { 
-        let author = await Author.findOne({ name: authorNames.trim() });
-        if (!author) {
-            author = await Author.create({ name: authorNames.trim() });
-        }
-        authorIds.push(author._id);
-    }
-
-    let category;
-    if (categoryName) {
-        category = await Category.findOne({ name: categoryName.trim() });
-        if (!category) {
-            category = await Category.create({ name: categoryName.trim() });
-        }
-    }
-
-    let publisher;
-    if (publisherName) {
-        publisher = await Publisher.findOne({ name: publisherName.trim() });
-        if (!publisher) {
-            publisher = await Publisher.create({ name: publisherName.trim() });
-        }
     }
 
     let coverImageData = {};
@@ -87,23 +51,22 @@ export const addBook = catchAsyncErrors(async (req, res, next) => {
     }
 
     const bookCopies = initialCopies.map(copy => ({
-        status: copy.status || 'Available', 
-        location: copy.location || 'N/A',   
-        _id: new mongoose.Types.ObjectId() 
+        status: copy.status || 'Available',
+        location: copy.location || 'N/A',
+        _id: new mongoose.Types.ObjectId()
     }));
-
 
     const book = await Book.create({
         title,
         isbn,
-        authors: authorIds,
-        category: category ? category._id : null,
-        publisher: publisher ? publisher._id : null,
+        authors: authors, 
+        category: categoryId, 
+        publisher: publisherId, 
         description,
         price,
         publication_date,
         page_count,
-        copies: bookCopies, 
+        copies: bookCopies,
         coverImage: coverImageData.url ? coverImageData : undefined
     });
 
@@ -274,8 +237,9 @@ export const getBookDetails = catchAsyncErrors(async (req, res, next) => {
 
 export const updateBook = catchAsyncErrors(async (req, res, next) => {
     const { id } = req.params;
+
     const {
-        title, isbn, authorNames, categoryName, publisherName,
+        title, isbn, authors, categoryId, publisherId,
         description, publication_date, page_count, price
     } = req.body;
 
@@ -284,15 +248,11 @@ export const updateBook = catchAsyncErrors(async (req, res, next) => {
         return next(new ErrorHandler("Book not found.", 404));
     }
 
-    // --- LOGIC XỬ LÝ ẢNH BÌA MỚI ---
     if (req.files && req.files.coverImage) {
         const { coverImage } = req.files;
-        // 1. Xóa ảnh cũ nếu có
         if (book.coverImage && book.coverImage.public_id) {
             await cloudinary.uploader.destroy(book.coverImage.public_id);
         }
-        
-        // 2. Upload ảnh mới
         const allowedFormats = ['image/png', 'image/jpeg', 'image/webp'];
         if (!allowedFormats.includes(coverImage.mimetype)) {
             return next(new ErrorHandler("Cover image file format not supported.", 400));
@@ -301,7 +261,6 @@ export const updateBook = catchAsyncErrors(async (req, res, next) => {
             const cloudinaryResponse = await cloudinary.uploader.upload(
                 coverImage.tempFilePath, { folder: "LIBRARY_BOOK_COVERS" }
             );
-            // 3. Cập nhật thông tin ảnh mới vào document sách
             book.coverImage = {
                 public_id: cloudinaryResponse.public_id,
                 url: cloudinaryResponse.secure_url,
@@ -311,9 +270,7 @@ export const updateBook = catchAsyncErrors(async (req, res, next) => {
             return next(new ErrorHandler("Failed to upload new cover image.", 500));
         }
     }
-    // --- KẾT THÚC LOGIC XỬ LÝ ẢNH ---
 
-    // Cập nhật các thông tin khác
     if (isbn && isbn !== book.isbn) {
         const isbnExists = await Book.findOne({ isbn: isbn, _id: { $ne: id } });
         if (isbnExists) {
@@ -328,26 +285,15 @@ export const updateBook = catchAsyncErrors(async (req, res, next) => {
     if (page_count) book.page_count = page_count;
     if (price) book.price = price;
 
-    if (authorNames && Array.isArray(authorNames)) {
-        const authorIds = [];
-        for (const name of authorNames) {
-            let author = await Author.findOne({ name: name.trim() });
-            if (!author) author = await Author.create({ name: name.trim() });
-            authorIds.push(author._id);
-        }
-        book.authors = authorIds;
+    if (authors) { 
+        book.authors = authors;
     }
 
-    if (categoryName) {
-        let category = await Category.findOne({ name: categoryName.trim() });
-        if (!category) category = await Category.create({ name: categoryName.trim() });
-        book.category = category._id;
+    if (categoryId) {
+        book.category = categoryId;
     }
-
-    if (publisherName) {
-        let publisher = await Publisher.findOne({ name: publisherName.trim() });
-        if (!publisher) publisher = await Publisher.create({ name: publisherName.trim() });
-        book.publisher = publisher._id;
+    if (publisherId) {
+        book.publisher = publisherId;
     }
 
     await book.save();

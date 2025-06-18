@@ -5,80 +5,74 @@ import PropTypes from 'prop-types';
 
 const EditBookPopup = ({ book, closePopup }) => {
     const dispatch = useDispatch();
-    
-    // Lấy dữ liệu metadata từ Redux store để làm gợi ý (autocomplete)
+
     const { authors, categories, publishers } = useSelector(state => state.metadata);
 
-    // State cho các trường dữ liệu của form
     const [formData, setFormData] = useState({
         title: '',
         isbn: '',
-        authorNames: '',
-        categoryName: '',
-        publisherName: '',
+        authorIds: [],
+        categoryId: '',
+        publisherId: '',
         description: '',
         price: '',
         page_count: '',
         publication_date: ''
     });
 
-    // State cho file ảnh và ảnh xem trước
     const [coverImageFile, setCoverImageFile] = useState(null);
     const [imagePreview, setImagePreview] = useState(null);
 
-    // useEffect này sẽ chạy mỗi khi component nhận được một `book` mới để sửa
-    // Nó có nhiệm vụ điền dữ liệu của sách vào form
     useEffect(() => {
         if (book) {
             setFormData({
                 title: book.title || '',
                 isbn: book.isbn || '',
-                authorNames: book.authors?.map(a => a.name).join(', ') || '',
-                categoryName: book.category?.name || '',
-                publisherName: book.publisher?.name || '',
+                authorIds: book.authors?.map(a => a._id) || [],
+                categoryId: book.category?._id || '',
+                publisherId: book.publisher?._id || '',
                 description: book.description || '',
                 price: book.price || '',
                 page_count: book.page_count || '',
                 publication_date: book.publication_date ? new Date(book.publication_date).toISOString().split('T')[0] : ''
             });
-            // Hiển thị ảnh bìa hiện tại của sách khi mở popup
             setImagePreview(book.coverImage?.url || 'https://via.placeholder.com/150x200.png?text=Cover');
-            // Reset file đã chọn để không bị gửi nhầm file cũ
-            setCoverImageFile(null); 
+            setCoverImageFile(null);
         }
     }, [book]);
 
-    // Xử lý thay đổi cho các ô input text/number/date
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
-    // Xử lý khi người dùng chọn một file ảnh mới
+    const handleAuthorChange = (e) => {
+        const selectedIds = Array.from(e.target.selectedOptions, option => option.value);
+        setFormData(prev => ({ ...prev, authorIds: selectedIds }));
+    };
+
     const handleImageChange = (e) => {
         const file = e.target.files[0];
         if (file) {
-            setCoverImageFile(file); // Lưu file mới vào state
-            setImagePreview(URL.createObjectURL(file)); // Tạo URL tạm thời để xem trước ảnh mới
+            setCoverImageFile(file); 
+            setImagePreview(URL.createObjectURL(file)); 
         }
     };
 
-    // Xử lý khi submit form
     const handleSubmit = (e) => {
         e.preventDefault();
         const bookData = new FormData();
+
+        for (const key in formData) {
+          if (key !== "authorIds" && key !== "categoryId" && key !== "publisherId") {
+            bookData.append(key, formData[key] || '');
+          }
+        }
         
-        // Gắn tất cả dữ liệu text vào FormData
-        Object.keys(formData).forEach(key => {
-            if (key !== "authorNames") { // Xử lý tác giả riêng
-                bookData.append(key, formData[key] || '');
-            }
-        });
-        
-        // Xử lý và gắn mảng tác giả
-        const authorsArray = formData.authorNames ? formData.authorNames.split(',').map(name => name.trim()).filter(name => name) : [];
-        authorsArray.forEach(author => bookData.append("authorNames", author));
-        
-        // Chỉ gắn file ảnh nếu người dùng đã chọn một file mới
+        formData.authorIds.forEach(id => bookData.append("authors", id)); 
+
+        bookData.append("categoryId", formData.categoryId);
+        bookData.append("publisherId", formData.publisherId);
+
         if (coverImageFile) {
             bookData.append("coverImage", coverImageFile);
         }
@@ -113,25 +107,47 @@ const EditBookPopup = ({ book, closePopup }) => {
                                 <input type='text' id="isbn-edit" name="isbn" value={formData.isbn} onChange={handleChange} className='mt-1 w-full px-4 py-2 border rounded-md' required />
                             </div>
                              <div>
-                                <label htmlFor="authorNames-edit" className="block text-sm font-medium text-gray-700">Author(s), comma-separated (*)</label>
-                                <input list="authors-list" id="authorNames-edit" name="authorNames" value={formData.authorNames} onChange={handleChange} className='mt-1 w-full px-4 py-2 border rounded-md' required />
-                                <datalist id="authors-list">
-                                    {authors.map(author => <option key={author._id} value={author.name} />)}
-                                </datalist>
+                                <label htmlFor="authorIds-edit" className="block text-sm font-medium text-gray-700">Author(s) (*)</label>
+                                <select
+                                    id="authorIds-edit"
+                                    name="authorIds"
+                                    multiple={true} 
+                                    value={formData.authorIds}
+                                    onChange={handleAuthorChange}
+                                    className='mt-1 w-full px-4 py-2 border rounded-md h-24' 
+                                    required
+                                >
+                                    {authors.map(author => <option key={author._id} value={author._id}>{author.name}</option>)}
+                                </select>
+                                <p className="mt-1 text-xs text-gray-500">Hold Ctrl/Cmd to select multiple authors.</p>
                             </div>
                             <div>
-                                <label htmlFor="categoryName-edit" className="block text-sm font-medium text-gray-700">Category (*)</label>
-                                <input list="categories-list" id="categoryName-edit" name="categoryName" value={formData.categoryName} onChange={handleChange} className='mt-1 w-full px-4 py-2 border rounded-md' required />
-                                <datalist id="categories-list">
-                                    {categories.map(cat => <option key={cat._id} value={cat.name} />)}
-                                </datalist>
+                                <label htmlFor="categoryId-edit" className="block text-sm font-medium text-gray-700">Category (*)</label>
+                                <select
+                                    id="categoryId-edit"
+                                    name="categoryId"
+                                    value={formData.categoryId}
+                                    onChange={handleChange}
+                                    className='mt-1 w-full px-4 py-2 border rounded-md'
+                                    required
+                                >
+                                    <option value="">Select a category</option>
+                                    {categories.map(cat => <option key={cat._id} value={cat._id}>{cat.name}</option>)}
+                                </select>
                             </div>
                             <div>
-                                <label htmlFor="publisherName-edit" className="block text-sm font-medium text-gray-700">Publisher (*)</label>
-                                <input list="publishers-list" id="publisherName-edit" name="publisherName" value={formData.publisherName} onChange={handleChange} className='mt-1 w-full px-4 py-2 border rounded-md' required />
-                                <datalist id="publishers-list">
-                                    {publishers.map(pub => <option key={pub._id} value={pub.name} />)}
-                                </datalist>
+                                <label htmlFor="publisherId-edit" className="block text-sm font-medium text-gray-700">Publisher (*)</label>
+                                <select
+                                    id="publisherId-edit"
+                                    name="publisherId"
+                                    value={formData.publisherId}
+                                    onChange={handleChange}
+                                    className='mt-1 w-full px-4 py-2 border rounded-md'
+                                    required
+                                >
+                                    <option value="">Select a publisher</option>
+                                    {publishers.map(pub => <option key={pub._id} value={pub._id}>{pub.name}</option>)}
+                                </select>
                             </div>
                             <div>
                                 <label htmlFor="price-edit" className="block text-sm font-medium text-gray-700">Price (for replacement) (*)</label>

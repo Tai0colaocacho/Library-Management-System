@@ -4,7 +4,7 @@ const copySchema = new mongoose.Schema({
     status: {
         type: String,
         required: true,
-        enum: ['Available', 'Reserved', 'Borrowed', 'Maintenance'],
+        enum: ['Available', 'Reserved', 'Borrowed', 'Maintenance', 'Lost', 'Damaged'],
         default: 'Available'
     },
     location: {

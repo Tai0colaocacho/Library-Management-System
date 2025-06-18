@@ -1,48 +1,47 @@
 import { useState } from "react";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { addBook } from "../store/slices/bookSlice";
 import { toggleAddBookPopup } from "../store/slices/popUpSlice";
-import { useSelector } from "react-redux";
 
 const AddBookPopup = () => {
   const dispatch = useDispatch();
-    const { authors, categories, publishers } = useSelector(state => state.metadata);
-    const [coverImage, setCoverImage] = useState(null); // State để giữ file ảnh
-    const [imagePreview, setImagePreview] = useState(null);
-  // State cho các trường thông tin chính của sách
+  const { authors, categories, publishers } = useSelector(state => state.metadata);
+  const [coverImage, setCoverImage] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+
   const [formData, setFormData] = useState({
     title: "",
     isbn: "",
-    authorNames: "", // Sẽ được chuyển thành mảng trước khi gửi
-    categoryName: "",
-    publisherName: "",
+    authorIds: [], 
+    categoryId: "",  
+    publisherId: "", 
     description: "",
     publication_date: "",
     page_count: "",
-    price: "" // Thêm trường giá sách để tính phí thay thế
+    price: ""
   });
 
-  // State cho danh sách các bản sao vật lý
   const [initialCopies, setInitialCopies] = useState([{ location: "", status: "Available" }]);
 
-  // Xử lý thay đổi trên các trường input thông thường
   const handleFormChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // Xử lý thay đổi trên trường location của một bản sao
+  const handleAuthorChange = (e) => {
+      const selectedIds = Array.from(e.target.selectedOptions, option => option.value);
+      setFormData(prev => ({ ...prev, authorIds: selectedIds }));
+  };
+
   const handleCopyChange = (index, event) => {
     const values = [...initialCopies];
     values[index].location = event.target.value;
     setInitialCopies(values);
   };
 
-  // Thêm một ô nhập liệu cho bản sao mới
   const handleAddCopyField = () => {
     setInitialCopies([...initialCopies, { location: "", status: "Available" }]);
   };
 
-  // Xóa một ô nhập liệu bản sao
   const handleRemoveCopyField = (index) => {
     const values = [...initialCopies];
     values.splice(index, 1);
@@ -62,44 +61,31 @@ const AddBookPopup = () => {
         setCoverImage(null);
         setImagePreview(null);
     }
-};
-  // Gửi dữ liệu lên server
+  };
+
   const handleAddBook = (e) => {
     e.preventDefault();
-    const bookData = new FormData(); // <<== THAY ĐỔI QUAN TRỌNG: DÙNG FORMDATA
+    const bookData = new FormData();
     
-    // Thêm các trường dữ liệu vào FormData
-    bookData.append("title", formData.title);
-    bookData.append("isbn", formData.isbn);
-    bookData.append("categoryName", formData.categoryName);
-    bookData.append("publisherName", formData.publisherName);
-    bookData.append("description", formData.description);
-    bookData.append("publication_date", formData.publication_date);
-    bookData.append("page_count", formData.page_count);
-    bookData.append("price", formData.price);
-
-    // Thêm mảng tác giả
-    const authors = formData.authorNames ? formData.authorNames.split(',').map(name => name.trim()).filter(name => name) : [];
-    if (authors.length > 0) {
-        // Append từng tác giả với CÙNG MỘT KEY là "authorNames"
-        authors.forEach(author => {
-            bookData.append("authorNames", author);
-        });
-    } else {
-        // Nếu không có tác giả nào, gửi một chuỗi rỗng để backend không bị undefined
-        bookData.append("authorNames", "");
+    for (const key in formData) {
+      if (key !== "authorIds" && key !== "categoryId" && key !== "publisherId") {
+        bookData.append(key, formData[key] || '');
+      }
     }
 
-    // Thêm mảng các bản sao (stringify)
+    formData.authorIds.forEach(id => bookData.append("authors", id)); 
+    
+    bookData.append("categoryId", formData.categoryId);
+    bookData.append("publisherId", formData.publisherId);
+
     const validCopies = initialCopies.filter(copy => copy.location.trim());
     bookData.append("initialCopies", JSON.stringify(validCopies));
     
-    // Thêm file ảnh nếu có
     if (coverImage) {
         bookData.append("coverImage", coverImage);
     }
 
-    dispatch(addBook(bookData)); // Gửi FormData đi
+    dispatch(addBook(bookData));
   };
 
   return (
@@ -110,16 +96,16 @@ const AddBookPopup = () => {
                     <form onSubmit={handleAddBook} className="space-y-4">
                         <div className="flex flex-col items-center gap-4">
                             <label htmlFor="cover-image-upload" className="cursor-pointer">
-                                <img 
-                                    src={imagePreview || 'https://via.placeholder.com/150x200.png?text=Cover'} 
-                                    alt="Cover Preview" 
+                                <img
+                                    src={imagePreview || 'https://via.placeholder.com/150x200.png?text=Cover'}
+                                    alt="Cover Preview"
                                     className="w-32 h-48 object-cover border rounded-md"
                                 />
                             </label>
                              <span className="text-sm text-gray-500">Click image to upload cover</span>
-                            <input 
+                            <input
                                 id="cover-image-upload"
-                                type="file" 
+                                type="file"
                                 accept="image/*"
                                 onChange={handleImageChange}
                                 className="hidden"
@@ -127,7 +113,6 @@ const AddBookPopup = () => {
                         </div>
                         
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-                            {/* --- Các field đã được thêm Label --- */}
                             <div>
                                 <label htmlFor="title" className="block text-sm font-medium text-gray-700">Book Title (*)</label>
                                 <input type='text' id="title" name="title" value={formData.title} onChange={handleFormChange} className='mt-1 w-full px-4 py-2 border rounded-md' required />
@@ -137,25 +122,47 @@ const AddBookPopup = () => {
                                 <input type='text' id="isbn" name="isbn" value={formData.isbn} onChange={handleFormChange} className='mt-1 w-full px-4 py-2 border rounded-md' required />
                             </div>
                              <div>
-                                <label htmlFor="authorNames" className="block text-sm font-medium text-gray-700">Author(s), comma-separated (*)</label>
-                                <input list="authors-list" id="authorNames" name="authorNames" value={formData.authorNames} onChange={handleFormChange} className='mt-1 w-full px-4 py-2 border rounded-md' required />
-                                <datalist id="authors-list">
-                                    {authors.map(author => <option key={author._id} value={author.name} />)}
-                                </datalist>
+                                <label htmlFor="authorIds" className="block text-sm font-medium text-gray-700">Author(s) (*)</label>
+                                <select
+                                    id="authorIds"
+                                    name="authorIds"
+                                    multiple={true} 
+                                    value={formData.authorIds}
+                                    onChange={handleAuthorChange}
+                                    className='mt-1 w-full px-4 py-2 border rounded-md h-24' 
+                                    required
+                                >
+                                    {authors.map(author => <option key={author._id} value={author._id}>{author.name}</option>)}
+                                </select>
+                                <p className="mt-1 text-xs text-gray-500">Hold Ctrl/Cmd to select multiple authors.</p>
                             </div>
                             <div>
-                                <label htmlFor="categoryName" className="block text-sm font-medium text-gray-700">Category (*)</label>
-                                <input list="categories-list" id="categoryName" name="categoryName" value={formData.categoryName} onChange={handleFormChange} className='mt-1 w-full px-4 py-2 border rounded-md' required />
-                                <datalist id="categories-list">
-                                    {categories.map(cat => <option key={cat._id} value={cat.name} />)}
-                                </datalist>
+                                <label htmlFor="categoryId" className="block text-sm font-medium text-gray-700">Category (*)</label>
+                                <select
+                                    id="categoryId"
+                                    name="categoryId"
+                                    value={formData.categoryId}
+                                    onChange={handleFormChange}
+                                    className='mt-1 w-full px-4 py-2 border rounded-md'
+                                    required
+                                >
+                                    <option value="">Select a category</option>
+                                    {categories.map(cat => <option key={cat._id} value={cat._id}>{cat.name}</option>)}
+                                </select>
                             </div>
                             <div>
-                                <label htmlFor="publisherName" className="block text-sm font-medium text-gray-700">Publisher (*)</label>
-                                <input list="publishers-list" id="publisherName" name="publisherName" value={formData.publisherName} onChange={handleFormChange} className='mt-1 w-full px-4 py-2 border rounded-md' required />
-                                <datalist id="publishers-list">
-                                    {publishers.map(pub => <option key={pub._id} value={pub.name} />)}
-                                </datalist>
+                                <label htmlFor="publisherId" className="block text-sm font-medium text-gray-700">Publisher (*)</label>
+                                <select
+                                    id="publisherId"
+                                    name="publisherId"
+                                    value={formData.publisherId}
+                                    onChange={handleFormChange}
+                                    className='mt-1 w-full px-4 py-2 border rounded-md'
+                                    required
+                                >
+                                    <option value="">Select a publisher</option>
+                                    {publishers.map(pub => <option key={pub._id} value={pub._id}>{pub.name}</option>)}
+                                </select>
                             </div>
                             <div>
                                 <label htmlFor="price" className="block text-sm font-medium text-gray-700">Price (for replacement) (*)</label>
@@ -203,7 +210,7 @@ const AddBookPopup = () => {
               </div>
           </div>
       </div>
-);
+  );
 };
 
 export default AddBookPopup;
